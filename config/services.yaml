@@ -20,5 +20,13 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
+    App\Service\UserRegistrationService:
+        autowire: true
+        autoconfigure: true
+    App\Service\LoginManager:
+        arguments:
+            $passwordHasher: '@security.password_hasher'
+
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
