@@ -29,6 +29,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\NotBlank]
     private ?string $username = null;
 
+    #[ORM\Column(type: 'json')]
+    private array $roles = [];
+
     public function getId(): ?int
     {
         return $this->id;
@@ -69,12 +72,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
-
-    public function getRoles(): array
-    {
-        return ['ROLE_USER'];
-    }
-
     public function eraseCredentials(): void
     {
         // Очистка чувствительных данных, если они есть (например, plain password)
@@ -83,5 +80,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getUserIdentifier(): string
     {
         return $this->email;
+    }
+
+    public function getRoles(): array
+    {
+
+        $roles = $this->roles;
+        $roles[] = 'ROLE_USER';
+
+        return array_unique($roles);
+    }
+
+    public function setRoles(array $roles): self
+    {
+        $this->roles = $roles;
+
+        return $this;
     }
 }
