@@ -45,6 +45,11 @@
         <button type="submit" :disabled="hasErrors">Зарегистрироваться</button>
       </form>
 
+      <div class="login-link">
+        <span>Уже есть аккаунт?</span>
+        <router-link to="/login" class="login-button">Войти</router-link>
+      </div>
+
       <p v-if="message">{{ message }}</p>
     </div>
   </div>
@@ -115,7 +120,14 @@ export default {
             "Content-Type": "application/json"
           }
         });
-        this.message = response.data.message; // "Пользователь успешно зарегистрирован"
+
+          this.message = response.data.message;
+        if (this.message === 'Регистрация прошла успешно') {
+          localStorage.setItem('isAuthenticated', 'true');
+          setTimeout(() => {
+            this.$router.push("/login");
+          }, 1500);
+        }
       } catch (error) {
         this.message = error.response?.data?.message || "Ошибка при соединении";
       }
@@ -134,8 +146,8 @@ html, body {
   justify-content: center;
   align-items: center;
   font-family: 'Arial', sans-serif;
-  background: red; /* фон с градиентом */
   color: #333;
+
 }
 
 .register-wrapper {
@@ -144,7 +156,8 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: inherit; /* фоновый градиент наследуется */
+  margin-top: 150px;
+
 }
 
 .register-form {
@@ -153,7 +166,7 @@ html, body {
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.9); /* полупрозрачный фон для формы */
+  background-color: rgba(255, 255, 255, 0.9);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
@@ -164,7 +177,7 @@ label {
 }
 
 input {
-  width: 100%;
+  width: 90%;
   padding: 10px;
   margin-bottom: 15px;
   border: 1px solid #ccc;
@@ -202,6 +215,30 @@ button:disabled {
   font-size: 0.9rem;
   margin-top: -10px;
   margin-bottom: 10px;
+}
+
+.login-link {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.login-link span {
+  margin-right: 10px;
+  font-size: 1rem;
+  color: #333;
+}
+
+.login-link .login-button {
+  font-size: 1rem;
+  color: #007bff;
+  text-decoration: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.login-link .login-button:hover {
+  color: #0056b3;
 }
 </style>
 

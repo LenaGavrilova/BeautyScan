@@ -67,8 +67,8 @@ export default {
       }
     },
     validatePassword() {
-      if (this.form.password.length < 6) {
-        this.errors.password = "Пароль должен быть не менее 6 символов.";
+      if (this.form.password.length < 8) {
+        this.errors.password = "Пароль должен быть не менее 8 символов.";
       } else {
         this.errors.password = null;
       }
@@ -89,8 +89,10 @@ export default {
           }
         });
         this.message = response.data.message; // Приветственное сообщение
-        // При успешном входе можно перенаправить на другую страницу
-        // Например: this.$router.push('/dashboard');
+        if (this.message === 'Вход выполнен успешно'){
+          await this.$store.dispatch('login', response.data.user);
+          this.$router.push("/");
+        }
       } catch (error) {
         this.message = error.response?.data?.message || "Ошибка при соединении";
       }
@@ -108,6 +110,7 @@ export default {
   border-radius: 10px;
   background-color: #fff;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  margin-top: 150px;
 }
 label {
   display: block;
@@ -115,7 +118,7 @@ label {
   font-size: 1rem;
 }
 input {
-  width: 100%;
+  width: 90%;
   padding: 10px;
   margin-bottom: 15px;
   border: 1px solid #ccc;

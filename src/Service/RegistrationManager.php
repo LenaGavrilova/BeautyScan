@@ -38,11 +38,9 @@ class RegistrationManager
         $user->setUsername($data['username']);
         $user->setEmail($data['email']);
 
-        // Хэширование пароля
         $hashedPassword = $this->passwordHasher->hashPassword($user, $data['password']);
         $user->setPassword($hashedPassword);
 
-        // Валидация пользователя
         $errors = $this->validator->validate($user);
         if (count($errors) > 0) {
             return new JsonResponse(['message' => (string) $errors], Response::HTTP_BAD_REQUEST);
@@ -52,9 +50,20 @@ class RegistrationManager
             $this->entityManager->persist($user);
             $this->entityManager->flush();
         } catch (\Exception $e) {
-            throw new \Exception('Ошибка сохранения: ' . $e->getMessage());
+
+            if (str_contains($e->getMessage(), 'повторяющееся значение ключа')) {
+                return new JsonResponse(
+                    ['message' => 'Email уже зарегистрирован.'],
+                    Response::HTTP_CONFLICT
+                );
+            }
+
+            return new JsonResponse(
+                ['message' => 'Ошибка сохранения: что-то пошло не так'],
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
 
-        return new JsonResponse(['message' => 'Пользователь успешно зарегистрирован'], Response::HTTP_CREATED);
+        return new JsonResponse(['message' => 'Регистрация прошла успешно'], Response::HTTP_CREATED);
     }
 }

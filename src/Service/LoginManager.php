@@ -19,15 +19,13 @@ class LoginManager
 
     public function authenticateUser(string $email, string $password): ?User
     {
-        // Ищем пользователя по email
+
         $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
-        // Если пользователь не найден
         if (!$user) {
             return null;
         }
 
-        // Проверяем пароль
         if ($this->passwordHasher->isPasswordValid($user, $password)) {
             return $user;
         }

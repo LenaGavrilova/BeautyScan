@@ -6,6 +6,7 @@ use App\Service\LoginManager;
 use App\Service\RegistrationManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -22,23 +23,18 @@ class AuthController extends AbstractController
     }
 
 
+    /**
+     * @throws \Exception
+     */
     #[Route('/api/register', name: 'api_register', methods: ['POST'])]
     public function register(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
-        // Простая проверка для демонстрации
-        if (!isset($data['username'], $data['email'], $data['password'])) {
-            return new JsonResponse(['message' => 'Некорректные данные'], JsonResponse::HTTP_BAD_REQUEST);
-        }
 
-        // Попытка зарегистрировать пользователя через сервис
-        try {
-            $user = $this->registrationManager->registerUser($data);
-            return new JsonResponse(['message' => 'Пользователь успешно зарегистрирован'], JsonResponse::HTTP_CREATED);
-        } catch (\Exception $e) {
-            return new JsonResponse(['message' => 'Ошибка при регистрации: ' . $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        $user = $this->registrationManager->registerUser($data);
+
+        return $user;
     }
 
     // Вход пользователя
