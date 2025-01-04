@@ -120,13 +120,13 @@ export default {
             "Content-Type": "application/json"
           }
         });
-
-          this.message = response.data.message;
+        const token = response.data.token;
+        localStorage.setItem("auth_token", token);
+        this.message = response.data.message;
         if (this.message === 'Регистрация прошла успешно') {
-          localStorage.setItem('isAuthenticated', 'true');
           setTimeout(() => {
             this.$router.push("/login");
-          }, 1500);
+          }, 1000);
         }
       } catch (error) {
         this.message = error.response?.data?.message || "Ошибка при соединении";

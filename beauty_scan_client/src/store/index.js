@@ -1,4 +1,5 @@
 import { createStore } from 'vuex';
+import createPersistedState from 'vuex-persistedstate';
 
 export const store = createStore({
     state: {
@@ -29,4 +30,7 @@ export const store = createStore({
         isAuthenticated: (state) => state.isAuthenticated,
         user: (state) => state.user,
     },
+    plugins: [createPersistedState()],
 });
+
+export default store;

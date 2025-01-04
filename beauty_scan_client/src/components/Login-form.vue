@@ -88,6 +88,8 @@ export default {
             "Content-Type": "application/json"
           }
         });
+        const token = response.data.token;
+        localStorage.setItem("auth_token", token);
         this.message = response.data.message; // Приветственное сообщение
         if (this.message === 'Вход выполнен успешно'){
           await this.$store.dispatch('login', response.data.user);

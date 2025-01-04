@@ -4,6 +4,9 @@ namespace App\Controller;
 
 use App\Service\LoginManager;
 use App\Service\RegistrationManager;
+use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTEncodeFailureException;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,10 +19,13 @@ class AuthController extends AbstractController
     private $registrationManager;
     private $loginManager;
 
-    public function __construct(RegistrationManager $registrationManager, LoginManager $loginManager)
+    private $jwtManager;
+
+    public function __construct(RegistrationManager $registrationManager, LoginManager $loginManager, JWTTokenManagerInterface $jwtManager)
     {
         $this->registrationManager = $registrationManager;
-        $this->loginManager = $loginManager;
+        $this->loginManager        = $loginManager;
+        $this->jwtManager          = $jwtManager;
     }
 
 
@@ -38,6 +44,8 @@ class AuthController extends AbstractController
     }
 
     // Вход пользователя
+
+
     #[Route('/api/login', name: 'api_login', methods: ['POST'])]
     public function login(Request $request): JsonResponse
     {
@@ -57,8 +65,8 @@ class AuthController extends AbstractController
         if (!$user) {
             return new JsonResponse(['message' => 'Неверный email или пароль'], JsonResponse::HTTP_UNAUTHORIZED);
         }
+            $token = $this->jwtManager->create($user);
 
-        // В случае успеха — возвращаем успешный ответ
-        return new JsonResponse(['message' => 'Вход выполнен успешно']);
+        return new JsonResponse(['message' => 'Вход выполнен успешно', 'token' => $token]);
     }
 }
