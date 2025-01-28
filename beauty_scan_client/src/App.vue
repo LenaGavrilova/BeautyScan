@@ -1,7 +1,7 @@
 <template>
   <Header />
   <div id="app">
-    <router-view></router-view> <!-- Здесь будет отображаться нужная форма -->
+    <router-view></router-view>
   </div>
 </template>
 
