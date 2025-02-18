@@ -16,17 +16,36 @@ class RequestController extends AbstractController
     {
         $this->requestManager = $requestManager;
     }
-    #[Route('/api/save-request', name: 'save_request', methods: ['POST'])]
-    public function saveRequest(Request $request): JsonResponse
-    {
-        $data = $request->request->all(); // Получаем текстовые данные
-        $file = $request->files->get('image'); // Получаем файл
 
-        // Передача данных в менеджер
+    #[Route('/api/extract-text', name: 'extract_text', methods: ['POST'])]
+    public function extractText(Request $request): JsonResponse
+    {
+        $file = $request->files->get('image');
+        $data = $request->request->all();
+
+        // Отладочное сообщение
+        if (!$file) {
+            return new JsonResponse(['success' => false, 'message' => 'Изображение не было загружено.'], 400);
+        }
+
+        if (empty(trim($data['text'] ?? '')) && !$file) {
+            return new JsonResponse(['success' => false, 'message' => 'Either text or image is required.'], 400);
+        }
+
         $result = $this->requestManager->handleSaveRequest($data, $file);
 
         return new JsonResponse($result, $result['success'] ? 200 : 400);
     }
+
+    #[Route('/api/save-request', name: 'save_request', methods: ['POST'])]
+    public function saveRequest(Request $request): JsonResponse
+    {
+        $data = $request->request->all();
+        if (!isset($data['text'])) {
+            return new JsonResponse(['success' => false, 'message' => 'Text is required.'], 400);
+        }
+
+        $result = $this->requestManager->handleSaveRequest($data);
+        return new JsonResponse($result, $result['success'] ? 200 : 400);
+    }
 }
-
-

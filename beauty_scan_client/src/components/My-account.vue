@@ -138,7 +138,7 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 150px;
+  margin-top: 50px;
 }
 
 .register-form {

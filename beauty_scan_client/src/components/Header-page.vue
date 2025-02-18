@@ -43,14 +43,7 @@ header {
   padding: 20px;
   background-color: rgba(213, 212, 212, 0.09);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
 }
-
-
 
 .logo {
   display: flex;

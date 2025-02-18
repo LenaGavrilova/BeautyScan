@@ -112,7 +112,7 @@ export default {
   border-radius: 10px;
   background-color: #fff;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  margin-top: 150px;
+  margin-top: 50px;
 }
 label {
   display: block;

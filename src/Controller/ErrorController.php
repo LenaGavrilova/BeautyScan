@@ -9,6 +9,4 @@ use Symfony\Component\Routing\Attribute\Route;
 class ErrorController
 {
 
-
-
 }
