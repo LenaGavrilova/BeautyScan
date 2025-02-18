@@ -31,7 +31,7 @@ services:
     App\Service\RequestManager:
         arguments:
             $uploadDir: '%upload_dir%'
-            $tesseractPath: '%tesseract_path%'
+
 
 
     # add more service definitions when explicit configuration is needed
