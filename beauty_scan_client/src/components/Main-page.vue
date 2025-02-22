@@ -17,17 +17,27 @@
         ></textarea>
 
         <div class="upload-buttons">
-          <label v-if="!modalVisible" class="button" @click="openModal('file')">
+          <button @click="openTipsModal('upload')" class="button">
             Загрузить изображение
-          </label>
+          </button>
 
-          <button v-if="!modalVisible" class="button" @click="openModal('camera')">Сделать фото</button>
+          <input
+              ref="fileInput"
+              type="file"
+              @change="handleFileUpload"
+              accept="image/*"
+              hidden
+          />
+
+          <button @click="openTipsModal('camera')" class="button">
+            Сделать фото
+          </button>
         </div>
       </div>
 
       <div v-if="previewImage" class="image-preview">
         <h3>Предпросмотр изображения:</h3>
-        <img :src="previewImage" alt="Предпросмотр" />
+        <img :src="previewImage" alt="Предпросмотр"/>
         <button @click="clearImage" class="button remove-button">Удалить изображение</button>
       </div>
 
@@ -38,25 +48,44 @@
 
     <div v-if="modalVisible" class="modal-overlay">
       <div class="modal">
-        <h3>Рекомендации для хорошего фото</h3>
-        <p>1. Сделайте фото состава крупным планом.</p>
-        <p>2. Убедитесь, что текст хорошо виден и не размытый.</p>
-        <p>3. Избегайте яркого света и отражений.</p>
-        <img src="your-image-path.jpg" alt="Example" class="example-image" />
+        <h3>Распознанный текст</h3>
+        <textarea v-model="recognizedText" class="text-modal"></textarea>
 
-        <button @click="closeModal" class="button">Понятно</button>
+        <p v-if="recognitionError" class="error-message">
+          Текст не распознан. Попробуйте ввести текст самостоятельно или загрузить новое изображение.
+        </p>
+
+        <div class="modal-buttons">
+          <button @click="closeModal" class="button">Отменить</button>
+          <button @click="saveRequest(recognizedText)" class="button check-button">Проверить</button>
+        </div>
       </div>
     </div>
 
+    <div v-if="tipsModalVisible" class="modal-overlay">
+      <div class="modal tips-modal">
+        <h3>Рекомендации по фото</h3>
+        <div class="tips-content">
+          <p>Чтобы получить лучший результат:</p>
+          <ul>
+            <li>Сфотографируйте состав крупным планом.</li>
+            <li>Убедитесь, что текст четкий и хорошо виден.</li>
+            <li>Избегайте бликов и теней на тексте.</li>
+          </ul>
+          <div class="tips-images">
+            <img src="/path/to/example1.jpg" alt="Пример хорошего фото"/>
+            <img src="/path/to/example2.jpg" alt="Пример плохого фото"/>
+          </div>
+        </div>
+        <button @click="closeTipsModal" class="button check-button">Понятно</button>
+      </div>
+    </div>
     <!-- Камера -->
     <div v-if="cameraActive" class="camera-overlay">
       <video ref="video" autoplay></video>
       <button @click="capturePhoto" class="button">Сделать снимок</button>
       <button @click="closeCamera" class="button remove-button">Закрыть</button>
     </div>
-
-    <!-- Скрытое поле для выбора файла -->
-    <input type="file" ref="fileInput" @change="handleFileUpload" accept="image/*" style="display: none" />
   </div>
 </template>
 
@@ -69,7 +98,10 @@ export default {
       cameraActive: false,
       stream: null,
       modalVisible: false,
-      modalType: '', // 'file' или 'camera'
+      recognizedText: "",
+      recognitionError: false,
+      tipsModalVisible: false,
+      actionType: null,
     };
   },
   computed: {
@@ -78,28 +110,108 @@ export default {
     },
   },
   methods: {
-    openModal(type) {
-      this.modalType = type;
-      this.modalVisible = true;
-    },
-    closeModal() {
-      this.modalVisible = false;
-      if (this.modalType === 'file') {
-        this.openFileChooser();
-      } else if (this.modalType === 'camera') {
-        this.openCamera();
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.previewImage = e.target.result;
+          this.inputText = "";
+        };
+        reader.readAsDataURL(file);
       }
     },
-    openFileChooser() {
-      // Сначала проверяем, что файл выбран и элемент существует
-      if (this.$refs.fileInput) {
-        this.$refs.fileInput.click();
+
+    clearImage() {
+      this.previewImage = null;
+      this.inputText = "";
+    },
+    async processInput() {
+      if (!this.inputText.trim() && !this.previewImage) {
+        alert("Введите текст или загрузите изображение.");
+        return;
+      }
+
+      if (this.inputText.trim() && !this.previewImage) {
+        await this.saveRequest(this.inputText.trim());
+        return;
+      }
+
+      const formData = new FormData();
+      const blob = await fetch(this.previewImage).then((res) => res.blob());
+      formData.append("image", blob, "uploaded_image.png");
+
+      try {
+        const response = await fetch("http://localhost:8000/api/extract-text", {
+          method: "POST",
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          this.recognizedText = result.extractedText || "";
+          this.recognitionError = !result.extractedText;
+          this.modalVisible = true;
+        } else {
+          alert(result.message); // Показываем сообщение об ошибке
+          this.recognizedText = "";
+          this.recognitionError = true;
+          this.modalVisible = true;
+        }
+      } catch (error) {
+        console.error("Ошибка при обработке запроса:", error);
+        alert("Произошла ошибка при обработке запроса.");
       }
     },
+    async saveRequest(text) {
+      if (!text || typeof text !== "string" || !text.trim()) {
+        alert("Текст обязателен для сохранения.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("text", text.trim());
+
+      // Если есть изображение, добавляем его путь
+      if (this.previewImage) {
+        const formData = new FormData();
+        const blob = await fetch(this.previewImage).then((res) => res.blob());
+        formData.append("image", blob, "uploaded_image.png"); // Убедитесь, что ключ "image" совпадает с ожидаемым на сервере
+      }
+
+      try {
+        const response = await fetch("http://localhost:8000/api/save-request", {
+          method: "POST",
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert("Запрос успешно сохранён!");
+          this.modalVisible = false;
+          this.inputText = "";
+          this.previewImage = null;
+        } else {
+          alert(`Ошибка: ${result.message}`);
+        }
+      } catch (error) {
+        console.error("Ошибка отправки данных:", error);
+        alert("Произошла ошибка при обработке запроса.");
+      }
+    },
+
     openCamera() {
       this.cameraActive = true;
       navigator.mediaDevices
-          .getUserMedia({ video: true })
+          .getUserMedia({video: true})
           .then((stream) => {
             this.stream = stream;
             this.$refs.video.srcObject = stream;
@@ -110,6 +222,7 @@ export default {
             this.cameraActive = false;
           });
     },
+
     capturePhoto() {
       const canvas = document.createElement("canvas");
       const video = this.$refs.video;
@@ -118,35 +231,40 @@ export default {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       this.previewImage = canvas.toDataURL("image/png");
+      this.inputText = "";
       this.closeCamera();
     },
+
     closeCamera() {
       if (this.stream) {
         this.stream.getTracks().forEach((track) => track.stop());
       }
       this.cameraActive = false;
     },
-    handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.previewImage = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
+
+    closeModal() {
+      this.modalVisible = false;
+      this.recognizedText = "";
+      this.recognitionError = false;
     },
-    clearImage() {
-      this.previewImage = null;
+    openTipsModal(action) {
+      this.actionType = action; // Сохраняем тип действия
+      this.tipsModalVisible = true; // Показываем модальное окно
     },
-    async processInput() {
-      if (!this.inputText.trim() && !this.previewImage) {
-        alert("Введите текст или загрузите изображение.");
-        return;
+
+    // Закрытие модального окна с рекомендациями
+    closeTipsModal() {
+      this.tipsModalVisible = false; // Скрываем модальное окно
+
+      // Выполняем действие после нажатия "Понятно"
+      if (this.actionType === "upload") {
+        this.$refs.fileInput.click(); // Открываем выбор файла
+      } else if (this.actionType === "camera") {
+        this.openCamera(); // Открываем камеру
       }
-      // Обработать введенные данные
     },
   },
+
 };
 </script>
 
@@ -263,16 +381,19 @@ video {
   margin-top: 20px;
   width: 100%;
 }
+
 .modal-content {
   background: white;
   padding: 20px;
   border-radius: 5px;
   text-align: center;
 }
+
 .text-area {
   width: 100%;
   height: 100px;
 }
+
 .modal {
   background: white;
   padding: 20px;
@@ -300,6 +421,7 @@ video {
   display: flex;
   justify-content: space-between;
 }
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -325,9 +447,31 @@ video {
   background-color: #a71d2a;
 }
 
-.instructions-image {
-  width: 100%;
-  max-width: 300px;
-  margin-top: 10px;
+.tips-modal {
+  max-width: 600px;
+  padding: 20px;
+  text-align: center;
+}
+
+.tips-content {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.tips-content ul {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+
+.tips-images {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+}
+
+.tips-images img {
+  max-width: 45%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
 }
 </style>
