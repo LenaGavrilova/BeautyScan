@@ -17,12 +17,11 @@
         ></textarea>
 
         <div class="upload-buttons">
-          <label class="button">
+          <label v-if="!modalVisible" class="button" @click="openModal('file')">
             Загрузить изображение
-            <input type="file" @change="handleFileUpload" accept="image/*" hidden />
           </label>
 
-          <button @click="openCamera" class="button">Сделать фото</button>
+          <button v-if="!modalVisible" class="button" @click="openModal('camera')">Сделать фото</button>
         </div>
       </div>
 
@@ -39,17 +38,13 @@
 
     <div v-if="modalVisible" class="modal-overlay">
       <div class="modal">
-        <h3>Распознанный текст</h3>
-        <textarea v-model="recognizedText" class="text-modal"></textarea>
+        <h3>Рекомендации для хорошего фото</h3>
+        <p>1. Сделайте фото состава крупным планом.</p>
+        <p>2. Убедитесь, что текст хорошо виден и не размытый.</p>
+        <p>3. Избегайте яркого света и отражений.</p>
+        <img src="your-image-path.jpg" alt="Example" class="example-image" />
 
-        <p v-if="recognitionError" class="error-message">
-          Текст не распознан. Попробуйте ввести текст самостоятельно или загрузить новое изображение.
-        </p>
-
-        <div class="modal-buttons">
-          <button @click="closeModal" class="button">Отменить</button>
-          <button @click="saveRequest(recognizedText)" class="button check-button">Проверить</button>
-        </div>
+        <button @click="closeModal" class="button">Понятно</button>
       </div>
     </div>
 
@@ -59,6 +54,9 @@
       <button @click="capturePhoto" class="button">Сделать снимок</button>
       <button @click="closeCamera" class="button remove-button">Закрыть</button>
     </div>
+
+    <!-- Скрытое поле для выбора файла -->
+    <input type="file" ref="fileInput" @change="handleFileUpload" accept="image/*" style="display: none" />
   </div>
 </template>
 
@@ -71,8 +69,7 @@ export default {
       cameraActive: false,
       stream: null,
       modalVisible: false,
-      recognizedText: "",
-      recognitionError: false,
+      modalType: '', // 'file' или 'camera'
     };
   },
   computed: {
@@ -81,103 +78,24 @@ export default {
     },
   },
   methods: {
-    handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.previewImage = e.target.result;
-          this.inputText = "";
-        };
-        reader.readAsDataURL(file);
+    openModal(type) {
+      this.modalType = type;
+      this.modalVisible = true;
+    },
+    closeModal() {
+      this.modalVisible = false;
+      if (this.modalType === 'file') {
+        this.openFileChooser();
+      } else if (this.modalType === 'camera') {
+        this.openCamera();
       }
     },
-    clearImage() {
-      this.previewImage = null;
-      this.inputText = "";
-    },
-    async processInput() {
-      if (!this.inputText.trim() && !this.previewImage) {
-        alert("Введите текст или загрузите изображение.");
-        return;
-      }
-
-      if (this.inputText.trim() && !this.previewImage) {
-        await this.saveRequest(this.inputText.trim());
-        return;
-      }
-
-      const formData = new FormData();
-      const blob = await fetch(this.previewImage).then((res) => res.blob());
-      formData.append("image", blob, "uploaded_image.png");
-
-      try {
-        const response = await fetch("http://localhost:8000/api/extract-text", {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-          },
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          this.recognizedText = result.extractedText || "";
-          this.recognitionError = !result.extractedText;
-          this.modalVisible = true;
-        } else {
-          alert(result.message); // Показываем сообщение об ошибке
-          this.recognizedText = "";
-          this.recognitionError = true;
-          this.modalVisible = true;
-        }
-      } catch (error) {
-        console.error("Ошибка при обработке запроса:", error);
-        alert("Произошла ошибка при обработке запроса.");
+    openFileChooser() {
+      // Сначала проверяем, что файл выбран и элемент существует
+      if (this.$refs.fileInput) {
+        this.$refs.fileInput.click();
       }
     },
-    async saveRequest(text) {
-      if (!text || typeof text !== "string" || !text.trim()) {
-        alert("Текст обязателен для сохранения.");
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("text", text.trim());
-
-      // Если есть изображение, добавляем его путь
-      if (this.previewImage) {
-        const formData = new FormData();
-        const blob = await fetch(this.previewImage).then((res) => res.blob());
-        formData.append("image", blob, "uploaded_image.png"); // Убедитесь, что ключ "image" совпадает с ожидаемым на сервере
-      }
-
-      try {
-        const response = await fetch("http://localhost:8000/api/save-request", {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-          },
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          alert("Запрос успешно сохранён!");
-          this.modalVisible = false;
-          this.inputText = "";
-          this.previewImage = null;
-        } else {
-          alert(`Ошибка: ${result.message}`);
-        }
-      } catch (error) {
-        console.error("Ошибка отправки данных:", error);
-        alert("Произошла ошибка при обработке запроса.");
-      }
-    },
-
     openCamera() {
       this.cameraActive = true;
       navigator.mediaDevices
@@ -192,7 +110,6 @@ export default {
             this.cameraActive = false;
           });
     },
-
     capturePhoto() {
       const canvas = document.createElement("canvas");
       const video = this.$refs.video;
@@ -201,21 +118,33 @@ export default {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       this.previewImage = canvas.toDataURL("image/png");
-      this.inputText = "";
       this.closeCamera();
     },
-
     closeCamera() {
       if (this.stream) {
         this.stream.getTracks().forEach((track) => track.stop());
       }
       this.cameraActive = false;
     },
-
-    closeModal() {
-      this.modalVisible = false;
-      this.recognizedText = "";
-      this.recognitionError = false;
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.previewImage = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    },
+    clearImage() {
+      this.previewImage = null;
+    },
+    async processInput() {
+      if (!this.inputText.trim() && !this.previewImage) {
+        alert("Введите текст или загрузите изображение.");
+        return;
+      }
+      // Обработать введенные данные
     },
   },
 };
@@ -394,5 +323,11 @@ video {
 
 .modal-buttons .button:first-child:hover {
   background-color: #a71d2a;
+}
+
+.instructions-image {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 10px;
 }
 </style>

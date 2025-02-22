@@ -22,12 +22,14 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-    const isAuthenticated = localStorage.getItem('auth_token'); // Проверка авторизации
-    if (to.path === '/' && isAuthenticated) {
+    const isAuthenticated = localStorage.getItem('auth_token');
+
+    if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
         next('/main');
     } else {
         next();
     }
 });
+
 
 export default router;
