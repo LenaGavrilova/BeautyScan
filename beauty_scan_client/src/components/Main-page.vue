@@ -80,6 +80,7 @@
         <button @click="closeTipsModal" class="button check-button">Понятно</button>
       </div>
     </div>
+
     <!-- Камера -->
     <div v-if="cameraActive" class="camera-overlay">
       <video ref="video" autoplay></video>
@@ -90,6 +91,8 @@
 </template>
 
 <script>
+import api from '@/api'; // Импортируем настроенный экземпляр axios
+
 export default {
   data() {
     return {
@@ -126,6 +129,7 @@ export default {
       this.previewImage = null;
       this.inputText = "";
     },
+
     async processInput() {
       if (!this.inputText.trim() && !this.previewImage) {
         alert("Введите текст или загрузите изображение.");
@@ -142,15 +146,14 @@ export default {
       formData.append("image", blob, "uploaded_image.png");
 
       try {
-        const response = await fetch("http://localhost:8000/api/extract-text", {
-          method: "POST",
-          body: formData,
+        // Используем api вместо fetch
+        const response = await api.post("/extract-text", formData, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+            "Content-Type": "multipart/form-data",
           },
         });
 
-        const result = await response.json();
+        const result = response.data;
 
         if (result.success) {
           this.recognizedText = result.extractedText || "";
@@ -167,6 +170,7 @@ export default {
         alert("Произошла ошибка при обработке запроса.");
       }
     },
+
     async saveRequest(text) {
       if (!text || typeof text !== "string" || !text.trim()) {
         alert("Текст обязателен для сохранения.");
@@ -178,21 +182,19 @@ export default {
 
       // Если есть изображение, добавляем его путь
       if (this.previewImage) {
-        const formData = new FormData();
         const blob = await fetch(this.previewImage).then((res) => res.blob());
-        formData.append("image", blob, "uploaded_image.png"); // Убедитесь, что ключ "image" совпадает с ожидаемым на сервере
+        formData.append("image", blob, "uploaded_image.png");
       }
 
       try {
-        const response = await fetch("http://localhost:8000/api/save-request", {
-          method: "POST",
-          body: formData,
+        // Используем api вместо fetch
+        const response = await api.post("/save-request", formData, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+            "Content-Type": "multipart/form-data",
           },
         });
 
-        const result = await response.json();
+        const result = response.data;
 
         if (result.success) {
           alert("Запрос успешно сохранён!");
@@ -211,7 +213,7 @@ export default {
     openCamera() {
       this.cameraActive = true;
       navigator.mediaDevices
-          .getUserMedia({video: true})
+          .getUserMedia({ video: true })
           .then((stream) => {
             this.stream = stream;
             this.$refs.video.srcObject = stream;
@@ -247,12 +249,12 @@ export default {
       this.recognizedText = "";
       this.recognitionError = false;
     },
+
     openTipsModal(action) {
       this.actionType = action; // Сохраняем тип действия
       this.tipsModalVisible = true; // Показываем модальное окно
     },
 
-    // Закрытие модального окна с рекомендациями
     closeTipsModal() {
       this.tipsModalVisible = false; // Скрываем модальное окно
 
@@ -264,7 +266,6 @@ export default {
       }
     },
   },
-
 };
 </script>
 

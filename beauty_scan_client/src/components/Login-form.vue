@@ -36,7 +36,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import api from '@/api'; // Импортируем настроенный экземпляр axios
 
 export default {
   data() {
@@ -83,15 +83,21 @@ export default {
       }
 
       try {
-        const response = await axios.post("http://localhost:8000/api/login", this.form, {
+        // Используем api вместо axios
+        const response = await api.post("/login", this.form, {
           headers: {
             "Content-Type": "application/json"
           }
         });
-        const token = response.data.token;
-        localStorage.setItem("auth_token", token);
+
+        const { access_token, refresh_token } = response.data;
+
+        // Сохраняем токены в localStorage
+        localStorage.setItem("auth_token", access_token);
+        localStorage.setItem("refresh_token", refresh_token);
+
         this.message = response.data.message; // Приветственное сообщение
-        if (this.message === 'Вход выполнен успешно'){
+        if (this.message === 'Вход выполнен успешно') {
           await this.$store.dispatch('login', response.data.user);
           this.$router.push("/");
         }

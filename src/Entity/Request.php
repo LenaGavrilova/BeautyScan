@@ -23,7 +23,7 @@ class Request
     #[ORM\Column(type: "datetime")]
     private $createdAt;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'requests')]
     #[ORM\JoinColumn(nullable: false)]
     private $user;
 

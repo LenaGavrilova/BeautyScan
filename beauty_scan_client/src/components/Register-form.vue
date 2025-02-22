@@ -56,7 +56,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import api from '@/api'; // Импортируем настроенный экземпляр axios
 
 export default {
   data() {
@@ -115,14 +115,15 @@ export default {
       }
 
       try {
-        const response = await axios.post("http://localhost:8000/api/register", this.form, {
+        // Используем api вместо axios
+        const response = await api.post("/register", this.form, {
           headers: {
             "Content-Type": "application/json"
           }
         });
-        const token = response.data.token;
-        localStorage.setItem("auth_token", token);
+
         this.message = response.data.message;
+
         if (this.message === 'Регистрация прошла успешно') {
           setTimeout(() => {
             this.$router.push("/login");
@@ -147,7 +148,6 @@ html, body {
   align-items: center;
   font-family: 'Arial', sans-serif;
   color: #333;
-
 }
 
 .register-wrapper {
@@ -157,7 +157,6 @@ html, body {
   justify-content: center;
   align-items: center;
   margin-top: 50px;
-
 }
 
 .register-form {
@@ -241,5 +240,3 @@ button:disabled {
   color: #0056b3;
 }
 </style>
-
-

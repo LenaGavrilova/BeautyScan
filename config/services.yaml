@@ -5,7 +5,6 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     upload_dir: '%kernel.project_dir%/public/uploads/images'
-    tesseract_path: 'D:\Tesseract\tesseract.exe'
 
 services:
     # default configuration for services in *this* file
@@ -22,15 +21,15 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    App\Service\UserRegistrationService:
-        autowire: true
-        autoconfigure: true
     App\Service\LoginManager:
         arguments:
             $passwordHasher: '@security.password_hasher'
     App\Service\RequestManager:
         arguments:
             $uploadDir: '%upload_dir%'
+    App\Controller\AuthController:
+        arguments:
+            $secretKey: '%env(resolve:JWT_PASSPHRASE)%'
 
 
 

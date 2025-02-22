@@ -30,18 +30,18 @@
           />
         </div>
         <div>
-        <button type="submit">Сохранить изменения</button>
+          <button type="submit">Сохранить изменения</button>
         </div>
       </form>
       <div>
-      <button @click="deleteAccount" class="delete-button">Удалить аккаунт</button>
+        <button @click="deleteAccount" class="delete-button">Удалить аккаунт</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import axios from "axios";
+import api from '@/api'; // Импортируем настроенный экземпляр axios
 
 export default {
   data() {
@@ -56,11 +56,8 @@ export default {
   methods: {
     async fetchUserData() {
       try {
-        const response = await axios.get("http://localhost:8000/api/account", {
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("auth_token")}`,
-          },
-        });
+        // Используем api вместо axios
+        const response = await api.get("/account");
         this.userData = response.data;
       } catch (error) {
         console.error(error);
@@ -74,16 +71,13 @@ export default {
           newPassword: this.newPassword || undefined,
         };
 
-        const response = await axios.put(
-            "http://localhost:8000/api/account",
-            payload,
-            {
-              headers: {
-                "Authorization": `Bearer ${localStorage.getItem("auth_token")}`,
-                "Content-Type": "application/json"
-              },
-            }
-                    );
+        // Используем api вместо axios
+        const response = await api.put("/account", payload, {
+          headers: {
+            "Content-Type": "application/json"
+          },
+        });
+
         alert("Данные успешно обновлены!");
         const token = response.data.token;
         localStorage.setItem("auth_token", token);
@@ -96,11 +90,8 @@ export default {
     async deleteAccount() {
       if (confirm("Вы уверены, что хотите удалить аккаунт? Это действие нельзя отменить.")) {
         try {
-          await axios.delete("http://localhost:8000/api/account", {
-            headers: {
-              "Authorization": `Bearer ${localStorage.getItem("auth_token")}`,
-            },
-          });
+          // Используем api вместо axios
+          await api.delete("/account");
           alert("Аккаунт успешно удалён.");
           localStorage.removeItem("auth_token");
           localStorage.setItem("isAuthenticated", "false");
