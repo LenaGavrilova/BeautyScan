@@ -50,14 +50,22 @@ class RegistrationManager
             $this->entityManager->persist($user);
             $this->entityManager->flush();
         } catch (\Exception $e) {
-
-            if (str_contains($e->getMessage(), 'повторяющееся значение ключа')) {
+            // Проверяем различные варианты сообщений об ошибке уникальности
+            if (
+                str_contains($e->getMessage(), 'повторяющееся значение ключа') ||
+                str_contains($e->getMessage(), 'duplicate key') ||
+                str_contains($e->getMessage(), 'unique constraint') ||
+                (method_exists($e, 'getPrevious') && $e->getPrevious() instanceof \PDOException && $e->getPrevious()->getCode() == '23505')
+            ) {
                 return new JsonResponse(
-                    ['message' => 'Email уже зарегистрирован.'],
+                    ['message' => 'Email или имя пользователя уже зарегистрированы.'],
                     Response::HTTP_CONFLICT
                 );
             }
 
+            // Логируем ошибку для отладки
+            error_log('Registration error: ' . $e->getMessage());
+            
             return new JsonResponse(
                 ['message' => 'Ошибка сохранения: что-то пошло не так'],
                 Response::HTTP_INTERNAL_SERVER_ERROR

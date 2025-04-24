@@ -8,8 +8,8 @@
       <ul>
         <li v-if="!isAuthenticated"><router-link to="/login">Войти</router-link></li>
         <li v-if="!isAuthenticated"><router-link to="/register">Зарегистрироваться</router-link></li>
-        <li v-if="isAuthenticated"><router-link to="/">Главная</router-link></li>
-        <li v-if="isAuthenticated"><router-link to="/history">История поиска</router-link></li>
+        <li v-if="isAuthenticated"><router-link to="/main">Анализ состава</router-link></li>
+        <li v-if="isAuthenticated"><router-link to="/history">История анализов</router-link></li>
         <li v-if="isAuthenticated"><router-link to="/account">Мой аккаунт</router-link></li>
         <li v-if="isAuthenticated"><button @click="logout">Выйти</button></li>
       </ul>
@@ -18,25 +18,34 @@
 </template>
 
 <script>
+import { useStore } from 'vuex';
+import { useRouter } from 'vue-router';
+
 export default {
+  setup() {
+    const store = useStore();
+    const router = useRouter();
+    
+    return { store, router };
+  },
   computed: {
     isAuthenticated() {
-      return this.$store.getters.isAuthenticated;
+      // Проверяем наличие токена в localStorage и состояние в хранилище
+      return !!localStorage.getItem('auth_token') || this.store.getters.isAuthenticated;
     },
   },
   methods: {
     logout() {
-      localStorage.clear();
-      this.$store.dispatch('logout');
-      this.$router.push('/login');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      this.store.dispatch('logout');
+      this.router.push('/login');
     },
   },
 };
 </script>
 
 <style scoped>
-
-
 header {
   display: flex;
   justify-content: space-between;
@@ -56,6 +65,12 @@ header {
   margin-right: 10px;
 }
 
+.logo span {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
 nav ul {
   list-style: none;
   margin: 0;
@@ -69,15 +84,50 @@ nav ul li {
 
 nav ul li a {
   text-decoration: none;
-  color: #007bff;
+  color: #3498db;
   font-size: 1rem;
+  transition: color 0.2s;
+}
+
+nav ul li a:hover {
+  color: #2980b9;
+}
+
+nav ul li a.router-link-active {
+  color: #2c3e50;
+  font-weight: 500;
 }
 
 button {
   background: none;
   border: none;
-  color: #007bff;
+  color: #e74c3c;
   cursor: pointer;
   font-size: 1rem;
+  transition: color 0.2s;
+}
+
+button:hover {
+  color: #c0392b;
+}
+
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    padding: 15px;
+  }
+  
+  .logo {
+    margin-bottom: 15px;
+  }
+  
+  nav ul {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  nav ul li {
+    margin: 5px 10px;
+  }
 }
 </style>

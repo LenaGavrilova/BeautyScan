@@ -83,6 +83,12 @@ class AuthController extends AbstractController
             'message' => 'Вход выполнен успешно',
             'access_token' => $accessToken,
             'refresh_token' => $refreshToken,
+            'user' => [
+                'id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'name' => $user->getUsername(),
+                'roles' => $user->getRoles()
+            ]
         ]);
     }
 

@@ -37,8 +37,16 @@
 
 <script>
 import api from '@/api'; // Импортируем настроенный экземпляр axios
+import { useStore } from 'vuex';
+import { useRouter } from 'vue-router';
 
 export default {
+  setup() {
+    const store = useStore();
+    const router = useRouter();
+    
+    return { store, router };
+  },
   data() {
     return {
       form: {
@@ -67,8 +75,8 @@ export default {
       }
     },
     validatePassword() {
-      if (this.form.password.length < 8) {
-        this.errors.password = "Пароль должен быть не менее 8 символов.";
+      if (this.form.password.length < 6) {
+        this.errors.password = "Пароль должен быть не менее 6 символов.";
       } else {
         this.errors.password = null;
       }
@@ -90,19 +98,26 @@ export default {
           }
         });
 
-        const { access_token, refresh_token } = response.data;
+        const { access_token, refresh_token, user } = response.data;
 
         // Сохраняем токены в localStorage
         localStorage.setItem("auth_token", access_token);
         localStorage.setItem("refresh_token", refresh_token);
+        
+        // Обновляем данные пользователя в хранилище
+        await this.store.dispatch('login', user);
 
-        this.message = response.data.message; // Приветственное сообщение
-        if (this.message === 'Вход выполнен успешно') {
-          await this.$store.dispatch('login', response.data.user);
-          this.$router.push("/");
-        }
+        this.message = "Вход выполнен успешно";
+        setTimeout(() => {
+          this.router.push("/main");
+        }, 1000);
       } catch (error) {
-        this.message = error.response?.data?.message || "Ошибка при соединении";
+        console.error("Ошибка при входе:", error);
+        if (!error.response) {
+          this.message = "Ошибка соединения с сервером. Проверьте, запущен ли сервер.";
+        } else {
+          this.message = error.response?.data?.message || "Ошибка при входе в систему";
+        }
       }
     }
   }

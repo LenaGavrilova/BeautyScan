@@ -42,6 +42,19 @@
           <span v-if="errors.password" class="error-message">{{ errors.password }}</span>
         </div>
 
+        <div>
+          <label for="confirmPassword">Повторите пароль:</label>
+          <input
+              type="password"
+              id="confirmPassword"
+              v-model="form.confirmPassword"
+              @blur="validateConfirmPassword"
+              :class="{ 'is-invalid': errors.confirmPassword }"
+              required
+          />
+          <span v-if="errors.confirmPassword" class="error-message">{{ errors.confirmPassword }}</span>
+        </div>
+
         <button type="submit" :disabled="hasErrors">Зарегистрироваться</button>
       </form>
 
@@ -56,33 +69,43 @@
 </template>
 
 <script>
-import api from '@/api'; // Импортируем настроенный экземпляр axios
+import { useRouter } from 'vue-router';
+import { useStore } from 'vuex';
+import api from '../api';
 
 export default {
+  name: 'RegisterForm',
+  setup() {
+    const router = useRouter();
+    const store = useStore();
+    return { router, store };
+  },
   data() {
     return {
       form: {
-        username: "",
-        email: "",
-        password: ""
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
       },
       errors: {
-        username: null,
-        email: null,
-        password: null
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
       },
-      message: ""
+      message: ''
     };
   },
   computed: {
     hasErrors() {
-      return !!this.errors.username || !!this.errors.email || !!this.errors.password;
+      return !!this.errors.username || !!this.errors.email || !!this.errors.password || !!this.errors.confirmPassword;
     }
   },
   methods: {
     validateUsername() {
-      if (this.form.username.length < 2) {
-        this.errors.username = "Имя пользователя должно содержать не менее 2 символов.";
+      if (this.form.username.length < 3) {
+        this.errors.username = "Имя пользователя должно быть не менее 3 символов.";
       } else {
         this.errors.username = null;
       }
@@ -96,41 +119,90 @@ export default {
       }
     },
     validatePassword() {
-      const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-      if (!passwordPattern.test(this.form.password)) {
-        this.errors.password =
-            "Пароль должен содержать не менее 8 символов, включая заглавные и строчные буквы, а также хотя бы одну цифру.";
+      if (this.form.password.length < 6) {
+        this.errors.password = "Пароль должен быть не менее 6 символов.";
       } else {
         this.errors.password = null;
       }
     },
-    async submitForm() {
+    validateConfirmPassword() {
+      if (this.form.password !== this.form.confirmPassword) {
+        this.errors.confirmPassword = "Пароли не совпадают.";
+      } else {
+        this.errors.confirmPassword = null;
+      }
+    },
+    validateForm() {
       this.validateUsername();
       this.validateEmail();
       this.validatePassword();
-
-      if (this.hasErrors) {
-        this.message = "Пожалуйста, исправьте ошибки в форме.";
+      this.validateConfirmPassword();
+      return !this.hasErrors;
+    },
+    async submitForm() {
+      // Проверка формы
+      if (!this.validateForm()) {
+        this.message = "Пожалуйста, исправьте ошибки в форме";
         return;
       }
 
       try {
-        // Используем api вместо axios
+        // Отправляем запрос на регистрацию
         const response = await api.post("/register", this.form, {
           headers: {
             "Content-Type": "application/json"
           }
         });
 
-        this.message = response.data.message;
+        // Если регистрация успешна, пытаемся выполнить вход
+        if (response.status === 201) {
+          this.message = "Регистрация успешна! Выполняем вход...";
+          
+          try {
+            // Выполняем вход с данными, которые использовались при регистрации
+            const loginResponse = await api.post("/login", {
+              email: this.form.email,
+              password: this.form.password
+            }, {
+              headers: {
+                "Content-Type": "application/json"
+              }
+            });
 
-        if (this.message === 'Регистрация прошла успешно') {
-          setTimeout(() => {
-            this.$router.push("/login");
-          }, 1000);
+            // Получаем токены и данные пользователя из ответа
+            const { access_token, refresh_token, user } = loginResponse.data;
+
+            // Сохраняем токены в localStorage
+            localStorage.setItem("auth_token", access_token);
+            localStorage.setItem("refresh_token", refresh_token);
+            
+            // Обновляем данные пользователя в хранилище
+            await this.store.dispatch('login', user);
+
+            this.message = "Вход выполнен успешно";
+            setTimeout(() => {
+              this.router.push("/main");
+            }, 1000);
+          } catch (loginError) {
+            console.error("Ошибка при входе после регистрации:", loginError);
+            this.message = "Регистрация успешна, но возникла ошибка при входе. Перенаправление на страницу входа...";
+            setTimeout(() => {
+              this.router.push("/login");
+            }, 2000);
+          }
         }
       } catch (error) {
-        this.message = error.response?.data?.message || "Ошибка при соединении";
+        console.error("Ошибка при регистрации:", error);
+        
+        if (!error.response) {
+          this.message = "Ошибка соединения с сервером. Проверьте, запущен ли сервер.";
+        } else if (error.response.status === 409) {
+          this.message = "Пользователь с таким email уже зарегистрирован";
+        } else if (error.response.status === 400) {
+          this.message = error.response.data.message || "Ошибка валидации данных";
+        } else {
+          this.message = error.response?.data?.message || "Ошибка при регистрации";
+        }
       }
     }
   }
