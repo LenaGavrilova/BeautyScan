@@ -316,6 +316,7 @@ h1 {
 
 .filter-item {
   flex: 1;
+  padding: 5px;
   min-width: 200px;
 }
 

@@ -481,7 +481,7 @@ export default {
 }
 
 .text-input {
-  width: 100%;
+  width: 97.5%;
   height: 150px;
   padding: 12px;
   border: 1px solid #ddd;
@@ -580,7 +580,7 @@ export default {
 }
 
 .text-modal {
-  width: 100%;
+  width: 95%;
   height: 200px;
   padding: 12px;
   border: 1px solid #ddd;
@@ -605,6 +605,7 @@ export default {
   max-width: 700px;
   max-height: 80vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .tips-content {
@@ -625,7 +626,7 @@ export default {
 .example {
   flex: 1;
   min-width: 48%;
-  padding: 15px;
+  padding: 2px;
   background-color: #f8f9fa;
   border-radius: 8px;
 }

@@ -243,7 +243,7 @@ class IngredientAnalyzerService
                     'position' => $position + 1,
                     'name' => ucfirst($ingredient),
                     'safety' => 'unknown',
-                    'description' => 'Неизвестный ингредиент. Информация о безопасности отсутствует.',
+                    'description' => 'Неизвестный ингредиент. Информация отсутствует.',
                     'unknown' => true
                 ];
                 $unknownCount++;
@@ -315,11 +315,11 @@ class IngredientAnalyzerService
             }
         }
         
-        if ($safetyPercentages['danger'] > 20) {
+        if ($safetyPercentages['danger'] > 30) {
             return 'Состав содержит значительное количество потенциально опасных ингредиентов. Рекомендуем избегать использования или проконсультироваться со специалистом.';
         }
         
-        if ($safetyPercentages['danger'] > 0) {
+        if ($safetyPercentages['danger'] > 15) {
             return 'Состав в целом безопасен, но содержит консерванты, которые могут вызывать аллергические реакции у людей с чувствительной кожей.';
         }
         
@@ -327,7 +327,7 @@ class IngredientAnalyzerService
             return 'Состав содержит значительное количество ингредиентов, которые могут вызывать реакции у людей с чувствительной кожей. Рекомендуем проявлять осторожность.';
         }
         
-        if ($safetyPercentages['caution'] > 0) {
+        if ($safetyPercentages['caution'] > 30) {
             return 'Состав преимущественно безопасен, но содержит компоненты, которые могут вызывать реакции у людей с очень чувствительной кожей.';
         }
         
