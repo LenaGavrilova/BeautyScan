@@ -535,8 +535,10 @@ export default {
 }
 
 .image-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-top: 20px;
-  text-align: center;
 }
 
 .image-preview h3 {
@@ -546,9 +548,8 @@ export default {
 
 .image-preview img {
   max-width: 100%;
-  max-height: 300px;
-  border-radius: 4px;
-  margin-bottom: 10px;
+  max-height: 400px;
+  margin-bottom: 15px;
 }
 
 .modal-overlay {
@@ -602,6 +603,8 @@ export default {
 
 .tips-modal {
   max-width: 700px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .tips-content {

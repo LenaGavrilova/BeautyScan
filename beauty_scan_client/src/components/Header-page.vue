@@ -10,6 +10,7 @@
         <li v-if="!isAuthenticated"><router-link to="/register">Зарегистрироваться</router-link></li>
         <li v-if="isAuthenticated"><router-link to="/main">Анализ состава</router-link></li>
         <li v-if="isAuthenticated"><router-link to="/history">История анализов</router-link></li>
+        <li v-if="isAuthenticated && isAdmin"><router-link to="/admin/ingredients">Управление ингредиентами</router-link></li>
         <li v-if="isAuthenticated"><router-link to="/account">Мой аккаунт</router-link></li>
         <li v-if="isAuthenticated"><button @click="logout">Выйти</button></li>
       </ul>
@@ -33,11 +34,16 @@ export default {
       // Проверяем наличие токена в localStorage и состояние в хранилище
       return !!localStorage.getItem('auth_token') || this.store.getters.isAuthenticated;
     },
+    isAdmin() {
+      const userRole = localStorage.getItem('user_role');
+      return userRole && userRole.includes('ROLE_ADMIN');
+    }
   },
   methods: {
     logout() {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_role');
       this.store.dispatch('logout');
       this.router.push('/login');
     },

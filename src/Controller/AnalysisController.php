@@ -199,6 +199,44 @@ class AnalysisController extends AbstractController
         return new JsonResponse($result);
     }
 
+    #[Route('/api/history/{id}', name: 'update_history_item', methods: ['PUT'])]
+    public function updateHistoryItem(int $id, Request $request): JsonResponse
+    {
+        $user = $this->security->getUser();
+        if (!$user) {
+            return new JsonResponse(['success' => false, 'message' => 'Пользователь не аутентифицирован.'], 401);
+        }
+
+        $analysis = $this->analysisRepository->findOneByIdAndUser($id, $user);
+        
+        if (!$analysis) {
+            return new JsonResponse(['success' => false, 'message' => 'Запись не найдена.'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        
+        // Обновляем только те поля, которые предоставлены
+        if (isset($data['query_type'])) {
+            $analysis->setQueryType($data['query_type']);
+        }
+        
+        if (isset($data['query_content'])) {
+            $analysis->setQueryContent($data['query_content']);
+        }
+        
+        if (isset($data['result'])) {
+            $analysis->setResult($data['result']);
+        }
+
+        $this->entityManager->flush();
+
+        return new JsonResponse([
+            'success' => true, 
+            'message' => 'Запись успешно обновлена.',
+            'id' => $analysis->getId()
+        ]);
+    }
+
     #[Route('/api/history/{id}', name: 'delete_history_item', methods: ['DELETE'])]
     public function deleteHistoryItem(int $id): JsonResponse
     {

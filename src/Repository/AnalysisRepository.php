@@ -36,10 +36,13 @@ class AnalysisRepository extends ServiceEntityRepository
                 ->setParameter('nextDay', $nextDay->format('Y-m-d'));
         }
 
-        // Применяем фильтр по ингредиенту
-        if (!empty($filters['ingredient'])) {
-            $qb->andWhere('a.queryContent LIKE :ingredient OR a.result LIKE :ingredient')
-                ->setParameter('ingredient', '%' . $filters['ingredient'] . '%');
+        // Применяем фильтр по ингредиенту - только если введен хотя бы один символ
+        if (!empty($filters['ingredient']) && strlen(trim($filters['ingredient'])) > 0) {
+            $ingredient = trim($filters['ingredient']);
+            
+            // Более надежный запрос для фильтрации, совместимый с PostgreSQL в Docker
+            $qb->andWhere('a.queryContent LIKE :ingredient')
+               ->setParameter('ingredient', '%' . $ingredient . '%');
         }
 
         // Создаем пагинатор

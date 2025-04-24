@@ -1,0 +1,25 @@
+name;safety_level;description;synonyms
+Aqua;safe;Основа большинства косметических средств;Water,H2O,Вода,Eau
+Glycerin;safe;Удерживает влагу в коже;Глицерин,Glycerol,Глицерол
+Sorbitol;safe;Увлажняющий компонент;
+Algae Extract;safe;Увлажняет и питает кожу;
+Hydroxyethyl Urea;safe;Увлажняющий компонент;
+Betaine;safe;Снижает раздражение;
+Sodium PCA;safe;Увлажняющий компонент;
+Serine;safe;Аминокислота, увлажняет кожу;
+Glycine;safe;Аминокислота, увлажняет кожу;
+Glutamic Acid;safe;Аминокислота, увлажняет кожу;
+Alanine;safe;Аминокислота, увлажняет кожу;
+Lysine;safe;Аминокислота, увлажняет кожу;
+Arginine;safe;Аминокислота, увлажняет кожу;
+Threonine;safe;Аминокислота, увлажняет кожу;
+Proline;safe;Аминокислота, увлажняет кожу;
+Cocos Nucifera Fruit Extract;safe;Питает и смягчает кожу;Кокосовое масло
+Almond Oil Glycereth-8 Esters;safe;Смягчает кожу;Миндальное масло
+Citric Acid;safe;Регулятор pH;Лимонная кислота
+Polysorbate 20;caution;Эмульгатор, помогает смешивать масла и воду;
+Parfum;caution;Может вызывать аллергические реакции;Fragrance,Отдушка,Аромат
+Hexyl Cinnamal;caution;Ароматизатор, может вызывать аллергические реакции;
+Coumarin;caution;Ароматизатор, может вызывать аллергические реакции;
+Methylchloroisothiazolinone;danger;Консервант, может вызывать аллергические реакции;MCI,Метилхлоризотиазолинон
+Methylisothiazolinone;danger;Консервант, может вызывать аллергические реакции;MI,Метилизотиазолинон 

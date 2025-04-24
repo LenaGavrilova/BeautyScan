@@ -1,6 +1,6 @@
 <template>
   <div class="history-container">
-    <h1>История запросов</h1>
+    <h1>История анализов</h1>
     
     <!-- Фильтры -->
     <div class="filters">
@@ -16,13 +16,16 @@
       
       <div class="filter-item">
         <label for="ingredient-filter">Фильтр по ингредиенту:</label>
-        <input 
-          type="text" 
-          id="ingredient-filter" 
-          v-model="filters.ingredient"
-          @input="applyFilters"
-          placeholder="Введите название ингредиента"
-        >
+        <div class="input-with-button">
+          <input 
+            type="text" 
+            id="ingredient-filter" 
+            v-model="filters.ingredient"
+            placeholder="Введите название ингредиента"
+            @keyup.enter="applyFilters"
+          >
+          <button class="search-btn" @click="applyFilters">Поиск</button>
+        </div>
       </div>
       
       <button class="reset-btn" @click="resetFilters">Сбросить фильтры</button>
@@ -35,63 +38,50 @@
     </div>
     
     <!-- Список истории -->
-    <div v-else-if="history.items && history.items.length > 0" class="history-list">
+    <div v-else-if="historyItems.length > 0" class="history-list">
       <div 
-        v-for="item in history.items" 
+        v-for="item in historyItems" 
         :key="item.id" 
         class="history-item"
-        @click="viewHistoryDetails(item.id)"
       >
         <div class="history-item-header">
           <span class="date">{{ formatDate(item.created_at) }}</span>
           <div class="actions">
-            <button class="delete-btn" @click.stop="deleteHistoryItem(item.id)">
-              <i class="fas fa-trash"></i>
+            <button class="edit-btn" @click="editItem(item)">
+              Редактировать
+            </button>
+            <button class="delete-btn" @click="deleteItem(item.id)">
+              Удалить
             </button>
           </div>
         </div>
-        <div class="history-item-content">
-          <p class="query-type">{{ item.query_type === 'text' ? 'Текстовый запрос' : 'Фото запрос' }}</p>
-          <p class="query-content">{{ truncateText(item.query_content, 100) }}</p>
+        <div class="history-item-content" @click="viewDetails(item.id)">
+          <p class="query-type"><strong>Тип запроса:</strong> {{ item.query_type === 'text' ? 'Текстовый запрос' : 'Фото запрос' }}</p>
+          <p class="query-content"><strong>Содержание:</strong> {{ truncateText(item.query_content, 100) }}</p>
           <div class="safety-rating">
-            <span>Оценка безопасности: </span>
-            <div class="rating-stars">
-              <i 
-                v-for="n in 5" 
-                :key="n" 
-                :class="['fas', 'fa-star', n <= Math.round(item.result.safety_rating) ? 'filled' : '']"
-              ></i>
-            </div>
-            <span class="rating-value">{{ item.result.safety_rating.toFixed(1) }}</span>
+            <strong>Оценка безопасности:</strong> {{ item.result.safety_rating.toFixed(1) }}
           </div>
         </div>
       </div>
       
       <!-- Пагинация -->
-      <div class="pagination" v-if="history.totalPages > 1">
+      <div class="pagination" v-if="totalPages > 1">
         <button 
           :disabled="currentPage === 1" 
           @click="changePage(currentPage - 1)"
           class="pagination-btn"
         >
-          <i class="fas fa-chevron-left"></i>
+          Предыдущая
         </button>
         
-        <button 
-          v-for="page in paginationPages" 
-          :key="page" 
-          :class="['pagination-btn', page === currentPage ? 'active' : '']"
-          @click="changePage(page)"
-        >
-          {{ page }}
-        </button>
+        <span>Страница {{ currentPage }} из {{ totalPages }}</span>
         
         <button 
-          :disabled="currentPage === history.totalPages" 
+          :disabled="currentPage === totalPages" 
           @click="changePage(currentPage + 1)"
           class="pagination-btn"
         >
-          <i class="fas fa-chevron-right"></i>
+          Следующая
         </button>
       </div>
     </div>
@@ -113,58 +103,92 @@
         </div>
       </div>
     </div>
+    
+    <!-- Модальное окно редактирования -->
+    <div class="modal" v-if="showEditModal">
+      <div class="modal-content">
+        <h3>Редактирование записи</h3>
+        <div class="form-group">
+          <label for="edit-type">Тип запроса:</label>
+          <select id="edit-type" v-model="editingItem.query_type">
+            <option value="text">Текстовый запрос</option>
+            <option value="photo">Фото запрос</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-content">Содержание запроса:</label>
+          <textarea 
+            id="edit-content" 
+            v-model="editingItem.query_content" 
+            rows="4"
+          ></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="cancel-btn" @click="showEditModal = false">Отмена</button>
+          <button class="save-btn" @click="saveEdit">Сохранить</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import api from '../api';
-import { useRouter } from 'vue-router';
-import { ref, computed, onMounted } from 'vue';
-
 export default {
   name: 'HistoryPage',
-  
-  setup() {
-    const router = useRouter();
-    const history = ref({ items: [], total: 0, page: 1, limit: 10, totalPages: 0 });
-    const loading = ref(true);
-    const currentPage = ref(1);
-    const filters = ref({
-      date: '',
-      ingredient: ''
-    });
-    const showDeleteModal = ref(false);
-    const itemToDelete = ref(null);
-    
-    // Получение истории запросов
-    const fetchHistory = async () => {
-      loading.value = true;
+  data() {
+    return {
+      historyItems: [],
+      loading: true,
+      currentPage: 1,
+      totalPages: 0,
+      filters: {
+        date: '',
+        ingredient: ''
+      },
+      showDeleteModal: false,
+      showEditModal: false,
+      deleteId: null,
+      editingItem: {
+        id: null,
+        query_type: '',
+        query_content: ''
+      },
+      searchTimeout: null
+    };
+  },
+  methods: {
+    async fetchHistory() {
+      this.loading = true;
       try {
         const params = {
-          page: currentPage.value,
+          page: this.currentPage,
           limit: 10
         };
         
-        // Добавляем фильтры, если они заданы
-        if (filters.value.date) {
-          params.date = filters.value.date;
+        if (this.filters.date) {
+          params.date = this.filters.date;
         }
         
-        if (filters.value.ingredient) {
-          params.ingredient = filters.value.ingredient;
+        if (this.filters.ingredient && this.filters.ingredient.trim()) {
+          params.ingredient = this.filters.ingredient.trim();
         }
         
-        const response = await api.get('/history', { params });
-        history.value = response.data;
+        console.log('Отправляемые параметры фильтрации:', params);
+        
+        const response = await this.$http.get('/history', { params });
+        console.log('Полученный ответ:', response.data);
+        
+        this.historyItems = response.data.items || [];
+        this.totalPages = response.data.totalPages || 0;
       } catch (error) {
         console.error('Ошибка при получении истории:', error);
+        alert('Ошибка при получении истории. Попробуйте позже.');
       } finally {
-        loading.value = false;
+        this.loading = false;
       }
-    };
+    },
     
-    // Форматирование даты
-    const formatDate = (dateString) => {
+    formatDate(dateString) {
       const date = new Date(dateString);
       return date.toLocaleDateString('ru-RU', {
         day: '2-digit',
@@ -173,112 +197,104 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       });
-    };
+    },
     
-    // Обрезка длинного текста
-    const truncateText = (text, maxLength) => {
+    truncateText(text, maxLength) {
+      if (!text) return '';
       if (text.length <= maxLength) return text;
       return text.substring(0, maxLength) + '...';
-    };
+    },
     
-    // Переход на страницу с деталями запроса
-    const viewHistoryDetails = (id) => {
-      router.push(`/history/${id}`);
-    };
+    viewDetails(id) {
+      this.$router.push(`/history/${id}`);
+    },
     
-    // Переход на страницу анализа
-    const goToAnalysis = () => {
-      router.push('/main');
-    };
+    goToAnalysis() {
+      this.$router.push('/main');
+    },
     
-    // Изменение страницы пагинации
-    const changePage = (page) => {
-      currentPage.value = page;
-      fetchHistory();
-    };
+    changePage(page) {
+      this.currentPage = page;
+      this.fetchHistory();
+    },
     
-    // Применение фильтров
-    const applyFilters = () => {
-      currentPage.value = 1; // Сбрасываем на первую страницу при применении фильтров
-      fetchHistory();
-    };
+    applyFilters() {
+      this.currentPage = 1;
+      this.fetchHistory();
+    },
     
-    // Сброс фильтров
-    const resetFilters = () => {
-      filters.value = {
+    resetFilters() {
+      this.filters = {
         date: '',
         ingredient: ''
       };
-      currentPage.value = 1;
-      fetchHistory();
-    };
+      this.currentPage = 1;
+      this.fetchHistory();
+    },
     
-    // Удаление записи из истории
-    const deleteHistoryItem = (id) => {
-      itemToDelete.value = id;
-      showDeleteModal.value = true;
-    };
+    editItem(item) {
+      this.editingItem = {
+        id: item.id,
+        query_type: item.query_type,
+        query_content: item.query_content
+      };
+      this.showEditModal = true;
+    },
     
-    // Подтверждение удаления
-    const confirmDelete = async () => {
+    async saveEdit() {
       try {
-        await api.delete(`/history/${itemToDelete.value}`);
-        fetchHistory(); // Обновляем список после удаления
-        showDeleteModal.value = false;
+        await this.$http.put(`/history/${this.editingItem.id}`, {
+          query_type: this.editingItem.query_type,
+          query_content: this.editingItem.query_content
+        });
+        
+        this.showEditModal = false;
+        this.fetchHistory();
+        alert('Запись успешно обновлена!');
+      } catch (error) {
+        console.error('Ошибка при обновлении записи:', error);
+        alert('Ошибка при обновлении записи. Попробуйте позже.');
+      }
+    },
+    
+    deleteItem(id) {
+      this.deleteId = id;
+      this.showDeleteModal = true;
+    },
+    
+    async confirmDelete() {
+      try {
+        await this.$http.delete(`/history/${this.deleteId}`);
+        this.showDeleteModal = false;
+        this.fetchHistory();
+        alert('Запись успешно удалена!');
       } catch (error) {
         console.error('Ошибка при удалении записи:', error);
+        alert('Ошибка при удалении записи. Попробуйте позже.');
       }
-    };
+    },
     
-    // Вычисляемое свойство для отображения страниц пагинации
-    const paginationPages = computed(() => {
-      const totalPages = history.value.totalPages;
-      const currentPageVal = currentPage.value;
-      
-      if (totalPages <= 5) {
-        return Array.from({ length: totalPages }, (_, i) => i + 1);
+    debouncedSearch() {
+      // Отменяем предыдущий таймер, если он есть
+      if (this.searchTimeout) {
+        clearTimeout(this.searchTimeout);
       }
       
-      if (currentPageVal <= 3) {
-        return [1, 2, 3, 4, 5];
-      }
-      
-      if (currentPageVal >= totalPages - 2) {
-        return [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-      }
-      
-      return [currentPageVal - 2, currentPageVal - 1, currentPageVal, currentPageVal + 1, currentPageVal + 2];
-    });
-    
-    // Загрузка истории при монтировании компонента
-    onMounted(() => {
-      fetchHistory();
-    });
-    
-    return {
-      history,
-      loading,
-      currentPage,
-      filters,
-      showDeleteModal,
-      paginationPages,
-      formatDate,
-      truncateText,
-      viewHistoryDetails,
-      goToAnalysis,
-      changePage,
-      applyFilters,
-      resetFilters,
-      deleteHistoryItem,
-      confirmDelete
-    };
+      // Устанавливаем новый таймер на 500 мс
+      this.searchTimeout = setTimeout(() => {
+        this.applyFilters();
+      }, 500);
+    }
+  },
+  created() {
+    this.fetchHistory();
   }
 };
 </script>
 
 <style scoped>
 .history-container {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 20px;
 }
@@ -286,7 +302,6 @@ export default {
 h1 {
   text-align: center;
   margin-bottom: 30px;
-  color: #333;
 }
 
 .filters {
@@ -295,58 +310,51 @@ h1 {
   gap: 15px;
   margin-bottom: 20px;
   padding: 15px;
-  background-color: #f5f5f5;
+  background-color: #f7f7f7;
   border-radius: 8px;
 }
 
 .filter-item {
-  display: flex;
-  flex-direction: column;
   flex: 1;
   min-width: 200px;
 }
 
-.filter-item label {
+label {
+  display: block;
   margin-bottom: 5px;
-  font-weight: 500;
+  font-weight: bold;
 }
 
-.filter-item input {
-  padding: 8px 12px;
+input, select, textarea {
+  width: 100%;
+  padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
 }
 
 .reset-btn {
-  align-self: flex-end;
   padding: 8px 15px;
   background-color: #f0f0f0;
   border: 1px solid #ddd;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.reset-btn:hover {
-  background-color: #e0e0e0;
+  margin-top: 22px;
+  height: 36px;
 }
 
 .loader-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
+  text-align: center;
+  padding: 50px 0;
 }
 
 .loader {
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #3498db;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   animation: spin 1s linear infinite;
-  margin-bottom: 15px;
+  margin: 0 auto 20px;
 }
 
 @keyframes spin {
@@ -362,28 +370,22 @@ h1 {
 
 .history-item {
   background-color: white;
+  border: 1px solid #ddd;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: 15px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.history-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .history-item-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
 }
 
-.date {
-  font-size: 0.9rem;
-  color: #666;
+.history-item-content {
+  cursor: pointer;
 }
 
 .actions {
@@ -391,100 +393,54 @@ h1 {
   gap: 10px;
 }
 
-.delete-btn {
-  background: none;
-  border: none;
-  color: #e74c3c;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 5px;
+.edit-btn, .delete-btn {
+  padding: 5px 10px;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
 
-.delete-btn:hover {
-  background-color: rgba(231, 76, 60, 0.1);
+.edit-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
 }
 
-.history-item-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.delete-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
 }
 
-.query-type {
-  font-weight: 500;
-  color: #333;
-}
-
-.query-content {
-  color: #555;
-  font-size: 0.95rem;
-}
-
-.safety-rating {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 5px;
-}
-
-.rating-stars {
-  display: flex;
-  gap: 2px;
-}
-
-.fa-star {
-  color: #ddd;
-}
-
-.fa-star.filled {
-  color: #f1c40f;
-}
-
-.rating-value {
-  font-weight: 500;
+.query-type, .query-content, .safety-rating {
+  margin-bottom: 8px;
 }
 
 .pagination {
   display: flex;
   justify-content: center;
-  gap: 5px;
+  align-items: center;
+  gap: 15px;
   margin-top: 30px;
 }
 
 .pagination-btn {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  background-color: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background-color: #f5f5f5;
-}
-
-.pagination-btn.active {
+  padding: 8px 15px;
   background-color: #3498db;
   color: white;
-  border-color: #3498db;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .pagination-btn:disabled {
-  opacity: 0.5;
+  background-color: #ccc;
   cursor: not-allowed;
 }
 
 .empty-history {
   text-align: center;
-  padding: 40px 0;
-}
-
-.empty-history p {
-  margin-bottom: 20px;
-  color: #666;
+  padding: 50px 0;
 }
 
 .new-analysis-btn {
@@ -494,11 +450,7 @@ h1 {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.new-analysis-btn:hover {
-  background-color: #2980b9;
+  margin-top: 20px;
 }
 
 .modal {
@@ -507,7 +459,7 @@ h1 {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0,0,0,0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -519,11 +471,10 @@ h1 {
   padding: 20px;
   border-radius: 8px;
   width: 90%;
-  max-width: 400px;
+  max-width: 500px;
 }
 
-.modal-content h3 {
-  margin-top: 0;
+.form-group {
   margin-bottom: 15px;
 }
 
@@ -534,20 +485,46 @@ h1 {
   margin-top: 20px;
 }
 
-.cancel-btn {
+.cancel-btn, .save-btn, .confirm-btn {
   padding: 8px 15px;
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
   border-radius: 4px;
   cursor: pointer;
 }
 
+.cancel-btn {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+}
+
+.save-btn {
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+}
+
 .confirm-btn {
-  padding: 8px 15px;
   background-color: #e74c3c;
   color: white;
   border: none;
-  border-radius: 4px;
+}
+
+.input-with-button {
+  display: flex;
+}
+
+.input-with-button input {
+  flex: 1;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.search-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 0 15px;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
   cursor: pointer;
 }
 </style> 

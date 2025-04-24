@@ -100,9 +100,14 @@ export default {
 
         const { access_token, refresh_token, user } = response.data;
 
-        // Сохраняем токены в localStorage
+        // Сохраняем токены и роль пользователя в localStorage
         localStorage.setItem("auth_token", access_token);
         localStorage.setItem("refresh_token", refresh_token);
+        
+        // Сохраняем роль пользователя для проверки прав админа
+        if (user && user.roles) {
+          localStorage.setItem("user_role", JSON.stringify(user.roles));
+        }
         
         // Обновляем данные пользователя в хранилище
         await this.store.dispatch('login', user);
