@@ -16,21 +16,31 @@ class Ingredient
     #[ORM\Column(type: "integer")]
     private $id;
 
-    #[ORM\Column(type: "string", length: 255, unique: true)]
-    private $name;
-
-    #[ORM\Column(type: "string", length: 50)]
-    private $safetyLevel;
+    #[ORM\Column(type: "text")]
+    private $traditionalName;
 
     #[ORM\Column(type: "text")]
-    private $description;
+    private $latinName;
 
-    #[ORM\OneToMany(mappedBy: "ingredient", targetEntity: IngredientSynonym::class, orphanRemoval: true)]
-    private $synonyms;
+    #[ORM\Column(type: "text")]
+    private $INCIName;
+
+    #[ORM\Column(type: "string", length: 50)]
+    private $dangerFactor;
+
+    #[ORM\Column(type: "string", length: 50)]
+    private $naturalness;
+
+
+    #[ORM\Column(type: "text")]
+    private $usages;
+
+    #[ORM\Column(type: "text")]
+    private $safety;
 
     public function __construct()
     {
-        $this->synonyms = new ArrayCollection();
+
     }
 
     public function getId(): ?int
@@ -38,69 +48,116 @@ class Ingredient
         return $this->id;
     }
 
-    public function getName(): ?string
+    /**
+     * @return mixed
+     */
+    public function getTraditionalName()
     {
-        return $this->name;
-    }
-
-    public function setName(string $name): self
-    {
-        $this->name = $name;
-
-        return $this;
-    }
-
-    public function getSafetyLevel(): ?string
-    {
-        return $this->safetyLevel;
-    }
-
-    public function setSafetyLevel(string $safetyLevel): self
-    {
-        $this->safetyLevel = $safetyLevel;
-
-        return $this;
-    }
-
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
-
-    public function setDescription(string $description): self
-    {
-        $this->description = $description;
-
-        return $this;
+        return $this->traditionalName;
     }
 
     /**
-     * @return Collection|IngredientSynonym[]
+     * @param mixed $traditionalName
      */
-    public function getSynonyms(): Collection
+    public function setTraditionalName($traditionalName): void
     {
-        return $this->synonyms;
+        $this->traditionalName = $traditionalName;
     }
 
-    public function addSynonym(IngredientSynonym $synonym): self
+    /**
+     * @return mixed
+     */
+    public function getLatinName()
     {
-        if (!$this->synonyms->contains($synonym)) {
-            $this->synonyms[] = $synonym;
-            $synonym->setIngredient($this);
-        }
-
-        return $this;
+        return $this->latinName;
     }
 
-    public function removeSynonym(IngredientSynonym $synonym): self
+    /**
+     * @param mixed $latinName
+     */
+    public function setLatinName($latinName): void
     {
-        if ($this->synonyms->removeElement($synonym)) {
-            // set the owning side to null (unless already changed)
-            if ($synonym->getIngredient() === $this) {
-                $synonym->setIngredient(null);
-            }
-        }
-
-        return $this;
+        $this->latinName = $latinName;
     }
+
+    /**
+     * @return mixed
+     */
+    public function getINCIName()
+    {
+        return $this->INCIName;
+    }
+
+    /**
+     * @param mixed $INCIName
+     */
+    public function setINCIName($INCIName): void
+    {
+        $this->INCIName = $INCIName;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getDangerFactor()
+    {
+        return $this->dangerFactor;
+    }
+
+    /**
+     * @param mixed $dangerFactor
+     */
+    public function setDangerFactor($dangerFactor): void
+    {
+        $this->dangerFactor = $dangerFactor;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getNaturalness()
+    {
+        return $this->naturalness;
+    }
+
+    /**
+     * @param mixed $naturalness
+     */
+    public function setNaturalness($naturalness): void
+    {
+        $this->naturalness = $naturalness;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getUsages()
+    {
+        return $this->usages;
+    }
+
+    /**
+     * @param mixed $usages
+     */
+    public function setUsages($usages): void
+    {
+        $this->usages = $usages;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getSafety()
+    {
+        return $this->safety;
+    }
+
+    /**
+     * @param mixed $safety
+     */
+    public function setSafety($safety): void
+    {
+        $this->safety = $safety;
+    }
+
 } 

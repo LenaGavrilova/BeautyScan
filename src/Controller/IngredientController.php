@@ -33,7 +33,7 @@ class IngredientController extends AbstractController
         $this->ingredientSynonymRepository = $ingredientSynonymRepository;
     }
 
-    #[Route('/ingredients', name: 'get_ingredients', methods: ['GET'])]
+    #[Route('/ingredients.csv', name: 'get_ingredients', methods: ['GET'])]
     public function getIngredients(Request $request): JsonResponse
     {
         $safetyLevel = $request->query->get('safety_level');
@@ -57,7 +57,7 @@ class IngredientController extends AbstractController
         return new JsonResponse($data);
     }
 
-    #[Route('/ingredients/{id}', name: 'get_ingredient', methods: ['GET'])]
+    #[Route('/ingredients.csv/{id}', name: 'get_ingredient', methods: ['GET'])]
     public function getIngredient(int $id): JsonResponse
     {
         $ingredient = $this->ingredientRepository->find($id);
@@ -85,7 +85,7 @@ class IngredientController extends AbstractController
         return new JsonResponse($data);
     }
 
-    #[Route('/ingredients', name: 'create_ingredient', methods: ['POST'])]
+    #[Route('/ingredients.csv', name: 'create_ingredient', methods: ['POST'])]
     public function createIngredient(Request $request): JsonResponse
     {
         $user = $this->security->getUser();
@@ -137,7 +137,7 @@ class IngredientController extends AbstractController
         ], 201);
     }
 
-    #[Route('/ingredients/{id}', name: 'update_ingredient', methods: ['PUT'])]
+    #[Route('/ingredients.csv/{id}', name: 'update_ingredient', methods: ['PUT'])]
     public function updateIngredient(int $id, Request $request): JsonResponse
     {
         $user = $this->security->getUser();
@@ -198,7 +198,7 @@ class IngredientController extends AbstractController
         ]);
     }
 
-    #[Route('/ingredients/{id}', name: 'delete_ingredient', methods: ['DELETE'])]
+    #[Route('/ingredients.csv/{id}', name: 'delete_ingredient', methods: ['DELETE'])]
     public function deleteIngredient(int $id): JsonResponse
     {
         $user = $this->security->getUser();

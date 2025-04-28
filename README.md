@@ -59,7 +59,7 @@ php bin/console doctrine:migrations:migrate
 
 5. Загрузить начальный набор ингредиентов из CSV-файла (опционально):
 ```bash
-php bin/console app:import-ingredients data/ingredients_example.csv
+php bin/console app:import-ingredients.csv data/ingredients_example.csv
 ```
 
 6. Запустить сервер:

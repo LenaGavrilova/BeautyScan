@@ -42,7 +42,7 @@ const routes = [
         meta: { requiresAuth: true }
     },
     { 
-        path: '/admin/ingredients', 
+        path: '/admin/ingredients.csv',
         component: AdminIngredients,
         meta: { requiresAuth: true, requiresAdmin: true }
     },

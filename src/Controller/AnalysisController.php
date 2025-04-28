@@ -54,11 +54,11 @@ class AnalysisController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
         
-        if (!isset($data['ingredients']) || empty($data['ingredients'])) {
+        if (!isset($data['ingredients.csv']) || empty($data['ingredients.csv'])) {
             return new JsonResponse(['success' => false, 'message' => 'Ингредиенты не указаны.'], 400);
         }
 
-        $ingredients = $data['ingredients'];
+        $ingredients = $data['ingredients.csv'];
         
         // Используем сервис для анализа ингредиентов
         $analysisResult = $this->ingredientAnalyzer->analyzeIngredients($ingredients);
@@ -73,12 +73,12 @@ class AnalysisController extends AbstractController
             'recommendation' => $analysisResult['recommendation'],
             'has_unknown_ingredients' => $analysisResult['has_unknown_ingredients'],
             'unknown_count' => $analysisResult['unknown_count'],
-            'ingredients' => []
+            'ingredients.csv' => []
         ];
         
         // Преобразуем ингредиенты в формат, ожидаемый фронтендом
-        foreach ($analysisResult['ingredients'] as $index => $ingredient) {
-            $result['ingredients'][] = [
+        foreach ($analysisResult['ingredients.csv'] as $index => $ingredient) {
+            $result['ingredients.csv'][] = [
                 'id' => $index + 1,
                 'name' => $ingredient['name'],
                 'description' => $ingredient['description'],

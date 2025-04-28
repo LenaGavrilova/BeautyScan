@@ -281,7 +281,7 @@ class IngredientAnalyzerService
         $recommendation = $this->generateRecommendation($safetyPercentages, $unknownCount, $totalIngredients);
         
         return [
-            'ingredients' => $analyzedIngredients,
+            'ingredients.csv' => $analyzedIngredients,
             'safety_rating' => $safetyRating,
             'safety_percentages' => $safetyPercentages,
             'recommendation' => $recommendation,

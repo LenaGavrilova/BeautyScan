@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:import-ingredients',
+    name: 'app:import-ingredients.csv',
     description: 'Импорт ингредиентов и их синонимов из CSV-файла',
 )]
 class ImportIngredientsCommand extends Command
@@ -72,7 +72,7 @@ class ImportIngredientsCommand extends Command
         }
 
         // Проверяем наличие необходимых полей в заголовке
-        $requiredFields = ['name', 'safety_level', 'description', 'synonyms'];
+        $requiredFields = ['traditional_name', 'latin_name', 'INCI_name', 'danger_factor','naturalness','usage','safety'];
         $missingFields = array_diff($requiredFields, $headers);
         if (!empty($missingFields)) {
             $io->error('В файле отсутствуют следующие обязательные поля: ' . implode(', ', $missingFields));
@@ -81,10 +81,13 @@ class ImportIngredientsCommand extends Command
         }
 
         // Получаем индексы полей
-        $nameIndex = array_search('name', $headers);
-        $safetyLevelIndex = array_search('safety_level', $headers);
-        $descriptionIndex = array_search('description', $headers);
-        $synonymsIndex = array_search('synonyms', $headers);
+        $traditionalNameIndex = array_search('traditional_name', $headers);
+        $latinNameIndex = array_search('latin_name', $headers);
+        $INCINameIndex = array_search('INCI_name', $headers);
+        $dangerFactorIndex = array_search('danger_factor', $headers);
+        $naturalnessIndex = array_search('naturalness', $headers);
+        $usageIndex = array_search('usage', $headers);
+        $safetyIndex = array_search('safety', $headers);
 
         $importedCount = 0;
         $updatedCount = 0;
@@ -99,36 +102,43 @@ class ImportIngredientsCommand extends Command
         try {
             // Читаем и обрабатываем данные
             while (($row = fgetcsv($file, 0, $delimiter, $enclosure, $escape)) !== false) {
-                $name = $row[$nameIndex] ?? '';
-                $safetyLevel = $row[$safetyLevelIndex] ?? '';
-                $description = $row[$descriptionIndex] ?? '';
-                $synonymsStr = $row[$synonymsIndex] ?? '';
+                $traditionalName = $row[$traditionalNameIndex] ?? '';
+                $latinName = $row[$latinNameIndex] ?? '';
+                $INCIName = $row[$INCINameIndex] ?? '';
+                $dangerFactor = $row[$dangerFactorIndex] ?? '';
+                $naturalness = $row[$naturalnessIndex] ?? '';
+                $usage = $row[$usageIndex] ?? '';
+                $safety = $row[$safetyIndex] ?? '';
 
                 // Пропускаем строки с пустым именем
-                if (empty($name)) {
+                if (empty($traditionalName) and empty($latinName) and empty($INCIName)) {
                     $io->warning('Пропущена строка с пустым именем ингредиента');
                     $errorCount++;
                     continue;
                 }
 
                 // Проверяем уровень безопасности
-                if (!in_array($safetyLevel, ['safe', 'caution', 'danger'])) {
-                    $io->warning("Некорректный уровень безопасности '{$safetyLevel}' для ингредиента '{$name}'. Используем 'caution'.");
-                    $safetyLevel = 'caution';
+                if (!in_array($dangerFactor, ['Низкий', 'Средний', 'Высокий'])) {
+                    $io->warning("Некорректный уровень безопасности '{$dangerFactor}' для ингредиента '{$traditionalName}'. Используем 'unknown'.");
+                    $dangerFactor = 'unknown';
                 }
 
                 // Ищем существующий ингредиент
-                $ingredient = $this->ingredientRepository->findByName($name);
+                $ingredient = $this->ingredientRepository->findByName($traditionalName);
                 $isNew = false;
 
                 if (!$ingredient) {
                     $ingredient = new Ingredient();
-                    $ingredient->setName($name);
+                    $ingredient->setTraditionalName($traditionalName);
                     $isNew = true;
                 }
 
-                $ingredient->setSafetyLevel($safetyLevel);
-                $ingredient->setDescription($description);
+                $ingredient->setLatinName($latinName);
+                $ingredient->setINCIName($INCIName);
+                $ingredient->setDangerFactor($dangerFactor);
+                $ingredient->setNaturalness($naturalness);
+                $ingredient->setUsages($usage);
+                $ingredient->setSafety($safety);
 
                 $this->entityManager->persist($ingredient);
                 
@@ -140,7 +150,7 @@ class ImportIngredientsCommand extends Command
                     $updatedCount++;
                 }
 
-                // Обрабатываем синонимы
+                /** Обрабатываем синонимы
                 if (!empty($synonymsStr)) {
                     $synonyms = array_map('trim', explode(',', $synonymsStr));
                     
@@ -164,6 +174,7 @@ class ImportIngredientsCommand extends Command
                         $synonymsCount++;
                     }
                 }
+                 */
 
                 $io->progressAdvance(); // Обновляем прогресс-бар
             }

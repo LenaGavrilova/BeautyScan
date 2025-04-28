@@ -19,7 +19,7 @@ class IngredientRepository extends ServiceEntityRepository
     public function findByName(string $name): ?Ingredient
     {
         return $this->createQueryBuilder('i')
-            ->where('LOWER(i.name) = :name')
+            ->where('LOWER(i.traditionalName) = :name')
             ->setParameter('name', strtolower($name))
             ->getQuery()
             ->getOneOrNullResult();
