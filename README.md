@@ -17,7 +17,7 @@ BeautyScan - это веб-приложение для анализа соста
 Бэкенд
 - PHP 8.2
 - Symfony 6
-- MySQL
+- Postgresql
 - Docker
 
 Фронтенд
@@ -37,7 +37,7 @@ BeautyScan - это веб-приложение для анализа соста
 
 1. Клонировать репозиторий:
 ```bash
-git clone https://github.com/yourusername/BeautyScan.git
+git clone https://github.com/LenaGavrilova/BeautyScan.git
 cd BeautyScan
 ```
 
@@ -48,7 +48,7 @@ composer install
 
 3. Настроить подключение к базе данных в файле `.env`:
 ```
-DATABASE_URL="mysql://username:password@127.0.0.1:3306/beauty_scan?serverVersion=8.0"
+DATABASE_URL="postgesql://username:password@127.0.0.1:3306/beauty_scan?serverVersion=8.0"
 ```
 
 4. Создать базу данных и выполнить миграции:
@@ -59,7 +59,9 @@ php bin/console doctrine:migrations:migrate
 
 5. Загрузить начальный набор ингредиентов из CSV-файла (опционально):
 ```bash
-php bin/console app:import-ingredients.csv data/ingredients_example.csv
+php bin/console app:import-ingredients.csv data/ingredients.csv
+php bin/console app:import-synonyms.csv data/synonyms.csv
+php bin/console app:import-categories.csv data/categories.csv
 ```
 
 6. Запустить сервер:
@@ -157,15 +159,8 @@ npm run serve
 
 Формат CSV-файла для импорта ингредиентов:
 ```
-name;safety_level;description;synonyms
-Aqua;safe;Основа большинства косметических средств;Water,H2O,Вода
+traditional_name;latin_name;INCI_name;danger_factor;naturalness;usage;safety
 ```
-
-Где:
-- `name` - название ингредиента
-- `safety_level` - уровень безопасности (safe, caution, danger)
-- `description` - описание ингредиента
-- `synonyms` - список синонимов, разделенных запятыми
 
 Лицензия
 

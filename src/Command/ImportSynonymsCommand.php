@@ -2,8 +2,8 @@
 
 namespace App\Command;
 
-use App\Entity\Ingredient;
-use App\Repository\IngredientRepository;
+use App\Entity\Synonym;
+use App\Repository\SynonymRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -13,21 +13,21 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:import-ingredients.csv',
-    description: 'Импорт ингредиентов из CSV-файла',
+    name: 'app:import-synonyms.csv',
+    description: 'Импорт синонимов из CSV-файла',
 )]
-class ImportIngredientsCommand extends Command
+class ImportSynonymsCommand extends Command
 {
     private EntityManagerInterface $entityManager;
-    private IngredientRepository $ingredientRepository;
+    private SynonymRepository $synonymRepository;
 
     public function __construct(
         EntityManagerInterface $entityManager,
-        IngredientRepository $ingredientRepository
+        SynonymRepository $synonymRepository
     ) {
         parent::__construct();
         $this->entityManager = $entityManager;
-        $this->ingredientRepository = $ingredientRepository;
+        $this->synonymRepository = $synonymRepository;
     }
 
     protected function configure(): void
@@ -71,7 +71,7 @@ class ImportIngredientsCommand extends Command
         }
 
         // Проверяем наличие необходимых полей в заголовке
-        $requiredFields = ['traditional_name', 'latin_name', 'INCI_name', 'danger_factor','naturalness','usage','safety'];
+        $requiredFields = ['name'];
         $missingFields = array_diff($requiredFields, $headers);
         if (!empty($missingFields)) {
             $io->error('В файле отсутствуют следующие обязательные поля: ' . implode(', ', $missingFields));
@@ -80,13 +80,7 @@ class ImportIngredientsCommand extends Command
         }
 
         // Получаем индексы полей
-        $traditionalNameIndex = array_search('traditional_name', $headers);
-        $latinNameIndex = array_search('latin_name', $headers);
-        $INCINameIndex = array_search('INCI_name', $headers);
-        $dangerFactorIndex = array_search('danger_factor', $headers);
-        $naturalnessIndex = array_search('naturalness', $headers);
-        $usageIndex = array_search('usage', $headers);
-        $safetyIndex = array_search('safety', $headers);
+        $nameIndex = array_search('name', $headers);
 
         $importedCount = 0;
         $updatedCount = 0;
@@ -100,53 +94,35 @@ class ImportIngredientsCommand extends Command
         try {
             // Читаем и обрабатываем данные
             while (($row = fgetcsv($file, 0, $delimiter, $enclosure, $escape)) !== false) {
-                $traditionalName = $row[$traditionalNameIndex] ?? '';
-                $latinName = $row[$latinNameIndex] ?? '';
-                $INCIName = $row[$INCINameIndex] ?? '';
-                $dangerFactor = $row[$dangerFactorIndex] ?? '';
-                $naturalness = $row[$naturalnessIndex] ?? '';
-                $usage = $row[$usageIndex] ?? '';
-                $safety = $row[$safetyIndex] ?? '';
+                $name = $row[$nameIndex] ?? '';
 
                 // Пропускаем строки с пустым именем
-                if (empty($traditionalName) and empty($latinName) and empty($INCIName)) {
+                if (empty($name)) {
                     $io->warning('Пропущена строка с пустым именем ингредиента');
                     $errorCount++;
                     continue;
                 }
 
-                // Проверяем уровень безопасности
-                if (!in_array($dangerFactor, ['Низкий', 'Средний', 'Высокий'])) {
-                    $io->warning("Некорректный уровень безопасности '{$dangerFactor}' для ингредиента '{$traditionalName}'. Используем 'unknown'.");
-                    $dangerFactor = 'unknown';
-                }
-
-                // Ищем существующий ингредиент
-                $ingredient = $this->ingredientRepository->findByName($traditionalName);
+                // Ищем существующий синоним
+                $synonym = $this->synonymRepository->findByName($name);
                 $isNew = false;
 
-                if (!$ingredient) {
-                    $ingredient = new Ingredient();
-                    $ingredient->setTraditionalName($traditionalName);
+                if (!$synonym) {
+                    $synonym = new Synonym();
+                    $synonym->setName($name);
                     $isNew = true;
                 }
 
-                $ingredient->setLatinName($latinName);
-                $ingredient->setINCIName($INCIName);
-                $ingredient->setDangerFactor($dangerFactor);
-                $ingredient->setNaturalness($naturalness);
-                $ingredient->setUsages($usage);
-                $ingredient->setSafety($safety);
+                $this->entityManager->persist($synonym);
 
-                $this->entityManager->persist($ingredient);
-                
-                // Если это новый ингредиент, сразу сохраняем его для получения ID
+                // Если это новый синоним, сразу сохраняем его для получения ID
                 if ($isNew) {
                     $this->entityManager->flush();
                     $importedCount++;
                 } else {
                     $updatedCount++;
                 }
+
                 $io->progressAdvance(); // Обновляем прогресс-бар
             }
 
@@ -159,8 +135,8 @@ class ImportIngredientsCommand extends Command
 
             $io->success([
                 'Импорт успешно завершен!',
-                "Добавлено новых ингредиентов: {$importedCount}",
-                "Обновлено существующих ингредиентов: {$updatedCount}",
+                "Добавлено новых синонимов: {$importedCount}",
+                "Обновлено существующих синонимов: {$updatedCount}",
                 "Ошибок: {$errorCount}"
             ]);
 
@@ -168,16 +144,16 @@ class ImportIngredientsCommand extends Command
         } catch (\Exception $e) {
             // В случае ошибки отменяем транзакцию
             $this->entityManager->rollback();
-            
+
             fclose($file);
             $io->progressFinish(); // Завершаем прогресс-бар
-            
+
             $io->error([
                 'Ошибка при импорте: ' . $e->getMessage(),
                 'Все изменения отменены.'
             ]);
-            
+
             return Command::FAILURE;
         }
     }
-} 
+}
