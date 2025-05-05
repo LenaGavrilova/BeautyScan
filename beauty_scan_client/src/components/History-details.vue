@@ -92,29 +92,29 @@
               <div class="position">#</div>
               <div class="name">Название</div>
               <div class="safety">Безопасность</div>
-              <div class="class">Класс</div>
+              <div class="class">Происхождение</div>
             </div>
             
             <div 
               v-for="(ingredient, index) in historyItem.result.ingredients" 
               :key="ingredient.id"
               class="ingredient-row"
-              :class="ingredient.safety_level"
+              :class="ingredient.danger_factor"
             >
               <div class="position">{{ index + 1 }}</div>
               <div class="name">
-                <div class="ingredient-name">{{ ingredient.name }}</div>
-                <div class="ingredient-description">{{ ingredient.description }}</div>
+                <div class="ingredient-name">{{ ingredient.traditional_name }}</div>
+                <div class="ingredient-description">{{ ingredient.usages }}</div>
               </div>
               <div class="safety">
                 <div 
                   class="safety-indicator" 
-                  :class="ingredient.safety_level"
-                  :title="getSafetyLevelText(ingredient.safety_level)"
+                  :class="ingredient.danger_factor"
+                  :title="getSafetyLevelText(ingredient.danger_factor)"
                 ></div>
-                <span>{{ getSafetyLevelText(ingredient.safety_level) }}</span>
+                <span>{{ getSafetyLevelText(ingredient.danger_factor) }}</span>
               </div>
-              <div class="class">{{ ingredient.class }}</div>
+              <div class="class">{{ getNaturalnessLevelText(ingredient.naturalness) }}</div>
             </div>
           </div>
         </div>
@@ -173,14 +173,25 @@ export default {
     // Получение текстового описания уровня безопасности
     const getSafetyLevelText = (level) => {
       switch (level) {
-        case 'safe':
+        case 'Низкий':
           return 'Безопасный';
-        case 'caution':
+        case 'Средний':
           return 'С предупреждением';
-        case 'danger':
+        case 'Высокий':
           return 'Опасный';
         default:
           return 'Неизвестно';
+      }
+    };
+
+    const getNaturalnessLevelText = (level) => {
+      switch (level) {
+        case 'Натуральный':
+          return 'Натуральный компонент';
+        case 'Синтетический':
+          return 'Синтетический компонент';
+        default:
+          return 'Неизвестный компонент';
       }
     };
     
@@ -199,6 +210,7 @@ export default {
       loading,
       formatDate,
       getSafetyLevelText,
+      getNaturalnessLevelText,
       goBack
     };
   }
@@ -443,16 +455,20 @@ h3 {
   background-color: #f9f9f9;
 }
 
-.ingredient-row.safe {
+.ingredient-row.Низкий {
   border-left: 4px solid #2ecc71;
 }
 
-.ingredient-row.caution {
+.ingredient-row.Средний {
   border-left: 4px solid #f39c12;
 }
 
-.ingredient-row.danger {
+.ingredient-row.Высокий {
   border-left: 4px solid #e74c3c;
+}
+
+.ingredient-row.unknown {
+  border-left: 4px solid #9b59b6;
 }
 
 .position {
@@ -489,16 +505,20 @@ h3 {
   border-radius: 50%;
 }
 
-.safety-indicator.safe {
+.safety-indicator.Низкий {
   background-color: #2ecc71;
 }
 
-.safety-indicator.caution {
+.safety-indicator.Средний {
   background-color: #f39c12;
 }
 
-.safety-indicator.danger {
+.safety-indicator.Высокий {
   background-color: #e74c3c;
+}
+
+.safety-indicator.unknown {
+  background-color: #9b59b6;
 }
 
 .class {

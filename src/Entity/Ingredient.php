@@ -31,7 +31,6 @@ class Ingredient
     #[ORM\Column(type: "string", length: 50)]
     private $naturalness;
 
-
     #[ORM\Column(type: "text")]
     private $usages;
 

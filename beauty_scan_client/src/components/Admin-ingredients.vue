@@ -37,12 +37,12 @@
         v-for="ingredient in filteredIngredients" 
         :key="ingredient.id" 
         class="ingredient-item"
-        :class="{'safe': ingredient.safety_level === 'safe', 
-                 'caution': ingredient.safety_level === 'caution', 
-                 'danger': ingredient.safety_level === 'danger'}"
+        :class="{'safe': ingredient.danger_factor === 'Низкий',
+                 'caution': ingredient.danger_factor === 'Средний',
+                 'danger': ingredient.danger_factor === 'Высокий'}"
       >
         <div class="ingredient-header">
-          <h3>{{ ingredient.name }}</h3>
+          <h3>{{ ingredient.traditional_name }}</h3>
           <div class="actions">
             <button class="edit-btn" @click="editIngredient(ingredient)">
               Редактировать
@@ -56,12 +56,12 @@
         <div class="ingredient-content">
           <div class="safety">
             <strong>Уровень безопасности:</strong> 
-            <span :class="ingredient.safety_level">
-              {{ getSafetyLevelText(ingredient.safety_level) }}
+            <span :class="ingredient.danger_factor">
+              {{ getSafetyLevelText(ingredient.danger_factor) }}
             </span>
           </div>
           <div class="description">
-            <strong>Описание:</strong> {{ ingredient.description }}
+            <strong>Описание:</strong> {{ ingredient.usages }}
           </div>
           <div class="synonyms" v-if="ingredient.synonyms && ingredient.synonyms.length">
             <strong>Синонимы:</strong> {{ ingredient.synonyms.map(s => s.name).join(', ') }}
@@ -82,21 +82,21 @@
         <form @submit.prevent="createIngredient">
           <div class="form-group">
             <label for="name">Название:</label>
-            <input id="name" type="text" v-model="ingredientForm.name" required>
+            <input id="name" type="text" v-model="ingredientForm.traditional_name" required>
           </div>
           
           <div class="form-group">
             <label for="safety_level">Уровень безопасности:</label>
-            <select id="safety_level" v-model="ingredientForm.safety_level" required>
-              <option value="safe">Безопасный</option>
-              <option value="caution">С осторожностью</option>
-              <option value="danger">Опасный</option>
+            <select id="safety_level" v-model="ingredientForm.danger_factor" required>
+              <option value="Низкий">Безопасный</option>
+              <option value="Средний">С осторожностью</option>
+              <option value="Высокий">Опасный</option>
             </select>
           </div>
           
           <div class="form-group">
             <label for="description">Описание:</label>
-            <textarea id="description" v-model="ingredientForm.description" rows="4" required></textarea>
+            <textarea id="description" v-model="ingredientForm.usages" rows="4" required></textarea>
           </div>
           
           <div class="form-group">
@@ -125,21 +125,21 @@
         <form @submit.prevent="updateIngredient">
           <div class="form-group">
             <label for="edit-name">Название:</label>
-            <input id="edit-name" type="text" v-model="ingredientForm.name" required>
+            <input id="edit-name" type="text" v-model="ingredientForm.traditional_name" required>
           </div>
           
           <div class="form-group">
             <label for="edit-safety_level">Уровень безопасности:</label>
-            <select id="edit-safety_level" v-model="ingredientForm.safety_level" required>
-              <option value="safe">Безопасный</option>
-              <option value="caution">С осторожностью</option>
-              <option value="danger">Опасный</option>
+            <select id="edit-safety_level" v-model="ingredientForm.danger_factor" required>
+              <option value="Низкий">Безопасный</option>
+              <option value="Средний">С осторожностью</option>
+              <option value="Высокий">Опасный</option>
             </select>
           </div>
           
           <div class="form-group">
             <label for="edit-description">Описание:</label>
-            <textarea id="edit-description" v-model="ingredientForm.description" rows="4" required></textarea>
+            <textarea id="edit-description" v-model="ingredientForm.usages" rows="4" required></textarea>
           </div>
           
           <div class="form-group">
@@ -191,9 +191,9 @@ export default {
       ingredientToDelete: null,
       ingredientForm: {
         id: null,
-        name: '',
-        safety_level: 'safe',
-        description: '',
+        traditional_name: '',
+        danger_factor: 'Низкий',
+        usages: '',
         synonyms: []
       }
     };
@@ -207,7 +207,7 @@ export default {
       try {
         const params = {};
         if (this.safetyFilter) {
-          params.safety_level = this.safetyFilter;
+          params.danger_factor = this.safetyFilter;
         }
         
         const response = await this.$http.get('/ingredients', { params });
@@ -229,16 +229,16 @@ export default {
       
       const query = this.searchQuery.toLowerCase();
       this.filteredIngredients = this.ingredients.filter(ingredient => {
-        return ingredient.name.toLowerCase().includes(query) || 
-               ingredient.description.toLowerCase().includes(query);
+        return ingredient.traditional_name.toLowerCase().includes(query) ||
+               ingredient.usages.toLowerCase().includes(query);
       });
     },
     
     getSafetyLevelText(level) {
       switch (level) {
-        case 'safe': return 'Безопасный';
-        case 'caution': return 'С осторожностью';
-        case 'danger': return 'Опасный';
+        case 'Низкий': return 'Безопасный';
+        case 'Средний': return 'С осторожностью';
+        case 'Высокий': return 'Опасный';
         default: return 'Неизвестно';
       }
     },
@@ -246,9 +246,9 @@ export default {
     editIngredient(ingredient) {
       this.ingredientForm = {
         id: ingredient.id,
-        name: ingredient.name,
-        safety_level: ingredient.safety_level,
-        description: ingredient.description,
+        traditional_name: ingredient.traditional_name,
+        danger_factor: ingredient.danger_factor,
+        usages: ingredient.usages,
         synonyms: ingredient.synonyms ? ingredient.synonyms.map(s => s.name) : []
       };
       this.showEditForm = true;
@@ -268,9 +268,9 @@ export default {
     resetForm() {
       this.ingredientForm = {
         id: null,
-        name: '',
-        safety_level: 'safe',
-        description: '',
+        traditional_name: '',
+        danger_factor: 'Низкий',
+        usages: '',
         synonyms: []
       };
     },
@@ -286,16 +286,15 @@ export default {
     async createIngredient() {
       try {
         await this.$http.post('/ingredients', {
-          name: this.ingredientForm.name,
-          safety_level: this.ingredientForm.safety_level,
-          description: this.ingredientForm.description,
+          traditional_name: this.ingredientForm.traditional_name,
+          danger_factor: this.ingredientForm.danger_factor,
+          usages: this.ingredientForm.usages,
           synonyms: this.ingredientForm.synonyms.filter(s => s.trim() !== '')
         });
         
         await this.loadIngredients();
         this.showCreateForm = false;
         this.resetForm();
-        alert('Ингредиент успешно добавлен!');
       } catch (error) {
         console.error('Ошибка при создании ингредиента:', error);
         alert('Ошибка при создании ингредиента. Попробуйте позже.');
@@ -305,16 +304,15 @@ export default {
     async updateIngredient() {
       try {
         await this.$http.put(`/ingredients/${this.ingredientForm.id}`, {
-          name: this.ingredientForm.name,
-          safety_level: this.ingredientForm.safety_level,
-          description: this.ingredientForm.description,
+          traditional_name: this.ingredientForm.traditional_name,
+          danger_factor: this.ingredientForm.danger_factor,
+          usages: this.ingredientForm.usages,
           synonyms: this.ingredientForm.synonyms.filter(s => s.trim() !== '')
         });
         
         await this.loadIngredients();
         this.showEditForm = false;
         this.resetForm();
-        alert('Ингредиент успешно обновлен!');
       } catch (error) {
         console.error('Ошибка при обновлении ингредиента:', error);
         alert('Ошибка при обновлении ингредиента. Попробуйте позже.');
@@ -328,7 +326,6 @@ export default {
         await this.loadIngredients();
         this.showDeleteConfirm = false;
         this.ingredientToDelete = null;
-        alert('Ингредиент успешно удален!');
       } catch (error) {
         console.error('Ошибка при удалении ингредиента:', error);
         alert('Ошибка при удалении ингредиента. Попробуйте позже.');

@@ -22,315 +22,280 @@ class IngredientAnalyzerService
         $this->entityManager = $entityManager;
         $this->ingredientRepository = $ingredientRepository;
         $this->ingredientSynonymRepository = $ingredientSynonymRepository;
-        
-        // Загружаем ингредиенты из базы данных
+
         $this->loadIngredients();
-        $this->loadSynonyms();
     }
-    
-    /**
-     * Загружает ингредиенты из базы данных
-     */
+
     private function loadIngredients(): void
     {
         $ingredients = $this->ingredientRepository->findAll();
-        
+
         foreach ($ingredients as $ingredient) {
-            $key = strtolower($ingredient->getName());
-            $this->knownIngredients[$key] = [
-                'name' => $ingredient->getName(),
-                'safety' => $ingredient->getSafetyLevel(),
-                'description' => $ingredient->getDescription()
+            $names = [
+                $ingredient->getTraditionalName(),
+                $ingredient->getLatinName(),
+                $ingredient->getINCIName()
             ];
+
+            $ingredientData = [
+                'traditional_name' => $ingredient->getTraditionalName(),
+                'latin_name' => $ingredient->getLatinName(),
+                'inci_name' => $ingredient->getINCIName(),
+                'danger_factor' => $ingredient->getDangerFactor(),
+                'naturalness' => $ingredient->getNaturalness(),
+                'usages' => $ingredient->getUsages(),
+                'safety' => $ingredient->getSafety()
+            ];
+
+            foreach (array_filter($names) as $name) {
+                // Сохраняем оригинальное название
+                $this->knownIngredients[$name] = $ingredientData;
+
+                // Сохраняем lowercase версию
+                $lowerName = mb_strtolower($name, 'UTF-8');
+                if (!isset($this->knownIngredients[$lowerName])) {
+                    $this->knownIngredients[$lowerName] = $ingredientData;
+                }
+
+                // Сохраняем версию с первой заглавной буквой
+                $titleName = mb_convert_case($name, MB_CASE_TITLE, 'UTF-8');
+                if (!isset($this->knownIngredients[$titleName])) {
+                    $this->knownIngredients[$titleName] = $ingredientData;
+                }
+            }
         }
-        
-        // Если в базе нет данных, используем тестовые данные
-        if (empty($this->knownIngredients)) {
-            $this->loadDefaultIngredients();
-        }
-    }
-    
-    /**
-     * Загружает синонимы ингредиентов из базы данных
-     */
-    private function loadSynonyms(): void
-    {
-        $synonyms = $this->ingredientSynonymRepository->findAll();
-        
-        foreach ($synonyms as $synonym) {
-            $key = strtolower($synonym->getName());
-            $ingredientKey = strtolower($synonym->getIngredient()->getName());
-            $this->synonyms[$key] = $ingredientKey;
-        }
-        
-        // Если в базе нет данных, используем тестовые данные
-        if (empty($this->synonyms)) {
-            $this->loadDefaultSynonyms();
-        }
-    }
-    
-    /**
-     * Загружает тестовые данные ингредиентов (используется, если база данных пуста)
-     */
-    private function loadDefaultIngredients(): void
-    {
-        $this->knownIngredients = [
-            'aqua' => [
-                'name' => 'Aqua',
-                'safety' => 'safe',
-                'description' => 'Основа большинства косметических средств'
-            ],
-            'sorbitol' => [
-                'name' => 'Sorbitol',
-                'safety' => 'safe',
-                'description' => 'Увлажняющий компонент'
-            ],
-            'algae extract' => [
-                'name' => 'Algae Extract',
-                'safety' => 'safe',
-                'description' => 'Увлажняет и питает кожу'
-            ],
-            'hydroxyethyl urea' => [
-                'name' => 'Hydroxyethyl Urea',
-                'safety' => 'safe',
-                'description' => 'Увлажняющий компонент'
-            ],
-            'glycerin' => [
-                'name' => 'Glycerin',
-                'safety' => 'safe',
-                'description' => 'Удерживает влагу в коже'
-            ],
-            'betaine' => [
-                'name' => 'Betaine',
-                'safety' => 'safe',
-                'description' => 'Снижает раздражение'
-            ],
-            'cocos nucifera fruit extract' => [
-                'name' => 'Cocos Nucifera Fruit Extract',
-                'safety' => 'safe',
-                'description' => 'Питает и смягчает кожу'
-            ],
-            'almond oil glycereth-8 esters' => [
-                'name' => 'Almond Oil Glycereth-8 Esters',
-                'safety' => 'safe',
-                'description' => 'Смягчает кожу'
-            ],
-            'polysorbate 20' => [
-                'name' => 'Polysorbate 20',
-                'safety' => 'caution',
-                'description' => 'Эмульгатор, помогает смешивать масла и воду'
-            ],
-            'parfum' => [
-                'name' => 'Parfum',
-                'safety' => 'caution',
-                'description' => 'Может вызывать аллергические реакции'
-            ],
-            'methylchloroisothiazolinone' => [
-                'name' => 'Methylchloroisothiazolinone',
-                'safety' => 'danger',
-                'description' => 'Консервант, может вызывать аллергические реакции'
-            ],
-            'methylisothiazolinone' => [
-                'name' => 'Methylisothiazolinone',
-                'safety' => 'danger',
-                'description' => 'Консервант, может вызывать аллергические реакции'
-            ],
-            'citric acid' => [
-                'name' => 'Citric Acid',
-                'safety' => 'safe',
-                'description' => 'Регулятор pH'
-            ],
-            'hexyl cinnamal' => [
-                'name' => 'Hexyl Cinnamal',
-                'safety' => 'caution',
-                'description' => 'Ароматизатор, может вызывать аллергические реакции'
-            ],
-            'coumarin' => [
-                'name' => 'Coumarin',
-                'safety' => 'caution',
-                'description' => 'Ароматизатор, может вызывать аллергические реакции'
-            ]
-        ];
-    }
-    
-    /**
-     * Загружает тестовые данные синонимов (используется, если база данных пуста)
-     */
-    private function loadDefaultSynonyms(): void
-    {
-        $this->synonyms = [
-            'water' => 'aqua',
-            'h2o' => 'aqua',
-            'вода' => 'aqua',
-            'глицерин' => 'glycerin',
-            'кокосовое масло' => 'cocos nucifera fruit extract',
-            'миндальное масло' => 'almond oil glycereth-8 esters',
-            'лимонная кислота' => 'citric acid',
-            'отдушка' => 'parfum',
-            'аромат' => 'parfum'
-        ];
     }
 
-    /**
-     * Анализирует список ингредиентов и возвращает результаты анализа
-     * 
-     * @param string $ingredientsText Текст с ингредиентами, разделенными запятыми
-     * @return array Результаты анализа
-     */
     public function analyzeIngredients(string $ingredientsText): array
     {
-        // Разбиваем текст на отдельные ингредиенты
         $ingredientsList = array_map('trim', explode(',', $ingredientsText));
-        
+
         $analyzedIngredients = [];
         $safeCount = 0;
         $cautionCount = 0;
         $dangerCount = 0;
         $unknownCount = 0;
-        
-        // Анализируем каждый ингредиент
+
         foreach ($ingredientsList as $position => $ingredient) {
             if (empty($ingredient)) {
                 continue;
             }
-            
-            $ingredientLower = strtolower($ingredient);
-            
-            // Проверяем, есть ли ингредиент в списке известных
-            if (isset($this->knownIngredients[$ingredientLower])) {
-                $ingredientData = $this->knownIngredients[$ingredientLower];
+
+            // Ищем в разных вариантах регистра
+            $ingredientData = $this->knownIngredients[$ingredient]
+                ?? $this->knownIngredients[mb_strtolower($ingredient, 'UTF-8')]
+                ?? $this->knownIngredients[mb_convert_case($ingredient, MB_CASE_TITLE, 'UTF-8')]
+                ?? null;
+
+            if ($ingredientData) {
+                $formattedName = $this->formatOutputName($ingredientData['traditional_name']);
+
                 $analyzedIngredients[] = [
                     'position' => $position + 1,
-                    'name' => $ingredientData['name'],
+                    'traditional_name' => $formattedName,
+                    'latin_name' => $this->formatOutputName($ingredientData['latin_name']),
+                    'inci_name' => $this->formatOutputName($ingredientData['inci_name']),
+                    'danger_factor' => $ingredientData['danger_factor'],
+                    'naturalness' => $ingredientData['naturalness'],
+                    'usages' => $ingredientData['usages'],
                     'safety' => $ingredientData['safety'],
-                    'description' => $ingredientData['description'],
                     'unknown' => false
                 ];
-                
-                // Увеличиваем счетчик соответствующей категории безопасности
-                if ($ingredientData['safety'] === 'safe') {
-                    $safeCount++;
-                } elseif ($ingredientData['safety'] === 'caution') {
-                    $cautionCount++;
-                } elseif ($ingredientData['safety'] === 'danger') {
-                    $dangerCount++;
+
+                // Счетчики безопасности
+                switch ($ingredientData['danger_factor']) {
+                    case 'Низкий': $safeCount++; break;
+                    case 'Средний': $cautionCount++; break;
+                    case 'Высокий': $dangerCount++; break;
                 }
-            } 
-            // Проверяем, есть ли ингредиент в списке синонимов
-            elseif (isset($this->synonyms[$ingredientLower])) {
-                $knownIngredientKey = $this->synonyms[$ingredientLower];
-                $ingredientData = $this->knownIngredients[$knownIngredientKey];
+            } else {
+                $formattedName = $this->formatOutputName($ingredient);
+
                 $analyzedIngredients[] = [
                     'position' => $position + 1,
-                    'name' => $ingredientData['name'],
-                    'safety' => $ingredientData['safety'],
-                    'description' => $ingredientData['description'],
-                    'unknown' => false
-                ];
-                
-                // Увеличиваем счетчик соответствующей категории безопасности
-                if ($ingredientData['safety'] === 'safe') {
-                    $safeCount++;
-                } elseif ($ingredientData['safety'] === 'caution') {
-                    $cautionCount++;
-                } elseif ($ingredientData['safety'] === 'danger') {
-                    $dangerCount++;
-                }
-            } 
-            // Если ингредиент не найден, добавляем его как неизвестный
-            else {
-                $analyzedIngredients[] = [
-                    'position' => $position + 1,
-                    'name' => ucfirst($ingredient),
+                    'traditional_name' => $formattedName,
+                    'latin_name' => $formattedName,
+                    'inci_name' => $formattedName,
+                    'danger_factor' => 'unknown',
+                    'naturalness' => 'unknown',
+                    'usages' => 'Неизвестный ингредиент. Информация отсутствует.',
                     'safety' => 'unknown',
-                    'description' => 'Неизвестный ингредиент. Информация отсутствует.',
                     'unknown' => true
                 ];
                 $unknownCount++;
             }
         }
-        
-        // Рассчитываем общую оценку безопасности
-        $totalIngredients = $safeCount + $cautionCount + $dangerCount + $unknownCount;
-        $safetyRating = 0;
-        $safetyPercentages = [
-            'safe' => 0,
-            'caution' => 0,
-            'danger' => 0,
-            'unknown' => 0
-        ];
-        
-        if ($totalIngredients > 0) {
-            // Рассчитываем проценты для каждой категории
-            $safetyPercentages['safe'] = round(($safeCount / $totalIngredients) * 100);
-            $safetyPercentages['caution'] = round(($cautionCount / $totalIngredients) * 100);
-            $safetyPercentages['danger'] = round(($dangerCount / $totalIngredients) * 100);
-            $safetyPercentages['unknown'] = round(($unknownCount / $totalIngredients) * 100);
-            
-            // Рассчитываем общую оценку безопасности (от 1 до 5)
-            if ($unknownCount === $totalIngredients) {
-                $safetyRating = 0; // Если все ингредиенты неизвестны, оценка 0
-            } else if ($totalIngredients - $unknownCount > 0) {
-                $safetyRating = round(($safeCount * 5 + $cautionCount * 3 + $dangerCount * 1) / ($totalIngredients - $unknownCount), 1);
-            } else {
-                $safetyRating = 0; // Защита от деления на ноль
-            }
-        }
-        
-        // Формируем рекомендацию на основе анализа
-        $recommendation = $this->generateRecommendation($safetyPercentages, $unknownCount, $totalIngredients);
-        
+
+        // Расчет показателей безопасности
+        $totalIngredients = count($ingredientsList);
+        $safetyRating = $this->calculateSafetyRating($analyzedIngredients);
+        $safetyPercentages = $this->calculateSafetyPercentages($safeCount, $cautionCount, $dangerCount, $unknownCount, $totalIngredients);
+
         return [
-            'ingredients.csv' => $analyzedIngredients,
+            'ingredients' => $analyzedIngredients,
             'safety_rating' => $safetyRating,
             'safety_percentages' => $safetyPercentages,
-            'recommendation' => $recommendation,
+            'recommendation' => $this->generateRecommendation($safetyPercentages, $unknownCount, $totalIngredients),
             'has_unknown_ingredients' => $unknownCount > 0,
             'unknown_count' => $unknownCount
         ];
     }
-    
-    /**
-     * Генерирует рекомендацию на основе результатов анализа
-     * 
-     * @param array $safetyPercentages Проценты безопасности по категориям
-     * @param int $unknownCount Количество неизвестных ингредиентов
-     * @param int $totalIngredients Общее количество ингредиентов
-     * @return string Рекомендация
-     */
-    private function generateRecommendation(array $safetyPercentages, int $unknownCount, int $totalIngredients): string
+
+    private function formatOutputName(string $name): string
     {
-        if ($totalIngredients === 0) {
-            return 'Не удалось проанализировать состав. Пожалуйста, проверьте введенный текст.';
+        return mb_convert_case($name, MB_CASE_TITLE, 'UTF-8');
+    }
+
+    private function calculateSafetyRating(array $analyzedIngredients): float
+    {
+        $total = count($analyzedIngredients);
+        if ($total === 0) {
+            return 0;
         }
-        
-        if ($unknownCount === $totalIngredients) {
-            return 'Все ингредиенты в составе неизвестны. Рекомендуем проконсультироваться со специалистом перед использованием.';
+
+        $weightedSum = 0;
+        $totalWeights = 0;
+        $unknownCount = 0;
+        $unknownWeight = 3; // Вес для неизвестных ингредиентов (можно настроить)
+
+        foreach ($analyzedIngredients as $ingredient) {
+            $position = $ingredient['position'];
+            $weight = 1 + (1 / sqrt($position));
+
+            if ($ingredient['unknown']) {
+                // Учитываем неизвестные ингредиенты с понижающим коэффициентом
+                $unknownCount++;
+                $weightedSum += $weight * $unknownWeight;
+            } else {
+                switch ($ingredient['danger_factor']) {
+                    case 'Низкий':
+                        $weightedSum += $weight * 5;
+                        break;
+                    case 'Средний':
+                        $weightedSum += $weight * 3;
+                        break;
+                    case 'Высокий':
+                        $weightedSum += $weight * 1;
+                        break;
+                }
+            }
+            $totalWeights += $weight;
         }
-        
-        if ($unknownCount > 0) {
-            $unknownPercent = round(($unknownCount / $totalIngredients) * 100);
-            if ($unknownPercent > 50) {
-                return 'Большинство ингредиентов в составе неизвестны. Рекомендуем проконсультироваться со специалистом перед использованием.';
+
+        if ($totalWeights === 0) {
+            return 0;
+        }
+
+        // Корректировка оценки при наличии неизвестных ингредиентов
+        $baseRating = $weightedSum / $totalWeights;
+        $unknownPenalty = min($unknownCount / $total, 1) * 2; // Штраф до 2 пунктов
+
+        $finalRating = max(0, $baseRating - $unknownPenalty);
+        return round($finalRating, 1);
+    }
+
+    private function calculateSafetyPercentages(int $safe, int $caution, int $danger, int $unknown, int $total): array
+    {
+        if ($total === 0) {
+            return ['safe' => 0, 'caution' => 0, 'danger' => 0, 'unknown' => 0];
+        }
+
+        // Сначала считаем проценты без округления
+        $percentages = [
+            'safe' => ($safe / $total) * 100,
+            'caution' => ($caution / $total) * 100,
+            'danger' => ($danger / $total) * 100,
+            'unknown' => ($unknown / $total) * 100
+        ];
+
+        // Округляем все значения
+        $rounded = array_map('round', $percentages);
+
+        // Проверяем сумму округленных значений
+        $sum = array_sum($rounded);
+
+        // Корректируем разницу (если сумма не 100)
+        if ($sum != 100) {
+            // Находим категорию с наибольшей дробной частью
+            $maxFraction = 0;
+            $adjustCategory = null;
+
+            foreach ($percentages as $category => $value) {
+                $fraction = $value - floor($value);
+                if ($fraction > $maxFraction) {
+                    $maxFraction = $fraction;
+                    $adjustCategory = $category;
+                }
+            }
+
+            // Корректируем выбранную категорию
+            if ($adjustCategory !== null) {
+                $rounded[$adjustCategory] += (100 - $sum);
             }
         }
-        
-        if ($safetyPercentages['danger'] > 30) {
-            return 'Состав содержит значительное количество потенциально опасных ингредиентов. Рекомендуем избегать использования или проконсультироваться со специалистом.';
-        }
-        
-        if ($safetyPercentages['danger'] > 15) {
-            return 'Состав в целом безопасен, но содержит консерванты, которые могут вызывать аллергические реакции у людей с чувствительной кожей.';
-        }
-        
-        if ($safetyPercentages['caution'] > 50) {
-            return 'Состав содержит значительное количество ингредиентов, которые могут вызывать реакции у людей с чувствительной кожей. Рекомендуем проявлять осторожность.';
-        }
-        
-        if ($safetyPercentages['caution'] > 30) {
-            return 'Состав преимущественно безопасен, но содержит компоненты, которые могут вызывать реакции у людей с очень чувствительной кожей.';
-        }
-        
-        return 'Состав преимущественно безопасен и подходит для большинства типов кожи.';
+
+        return $rounded;
     }
-} 
+
+    private function generateRecommendation(array $percentages, int $unknownCount, int $total): string
+    {
+        if ($total === 0) {
+            return 'Не удалось проанализировать состав.';
+        }
+
+        // Рассчитываем процент известных ингредиентов
+        $knownPercent = 100 - ($unknownCount / $total * 100);
+
+        // 1. Проверка на неизвестные компоненты (по стандартам EU Cosmetics Regulation)
+        if ($unknownCount === $total) {
+            return 'Внимание! Все компоненты состава не идентифицированы. По требованиям EU Regulation 1223/2009, продукт не может быть признан безопасным без полной декларации состава.';
+        }
+
+        if ($knownPercent < 70) {
+            return 'Высокий риск! Более 30% состава не идентифицировано. Согласно исследованиям EWG, такие продукты могут содержать неучтённые аллергены или токсичные вещества.';
+        }
+
+        // 2. Оценка опасных ингредиентов (по классификации FDA)
+        $dangerThresholds = [
+            'high' => 15,  // Более 15% высокоопасных - критический уровень
+            'medium' => 5   // Более 5% - требует предупреждения
+        ];
+
+        if ($percentages['danger'] > $dangerThresholds['high']) {
+            return 'Опасный состав! Содержит ' . $percentages['danger'] . '% компонентов с высоким риском (по классификации FDA). Может вызывать раздражение, аллергические реакции или долгосрочные негативные эффекты.';
+        }
+
+        if ($percentages['danger'] > $dangerThresholds['medium']) {
+            $msg = 'Осторожно! Содержит ' . $percentages['danger'] . '% потенциально опасных компонентов.';
+            $msg .= ($percentages['danger'] > 10) ? ' Рекомендуется ограниченное применение.' : ' Подходит для краткосрочного использования.';
+            return $msg;
+        }
+
+        // 3. Оценка ингредиентов средней опасности (по данным EWG Skin Deep)
+        if ($percentages['caution'] > 40) {
+            return 'Состав требует внимания! ' . $percentages['caution'] . '% компонентов могут вызывать раздражение у чувствительной кожи (по данным EWG).';
+        }
+
+        if ($percentages['caution'] > 20) {
+            return 'Умеренный риск. ' . $percentages['caution'] . '% ингредиентов средней опасности. Проверьте индивидуальную переносимость.';
+        }
+
+        // 4. Оценка безопасных ингредиентов
+        $safetyScore = $percentages['safe'] - ($percentages['danger'] * 2) - $percentages['caution'];
+
+        if ($safetyScore > 80) {
+            return 'Отличный состав! Более ' . $percentages['safe'] . '% безопасных компонентов. Соответствует стандартам ECOCERT и COSMOS Organic.';
+        }
+
+        if ($safetyScore > 60) {
+            return 'Хороший состав. Преобладают безопасные ингредиенты (' . $percentages['safe'] . '%). Подходит для регулярного использования.';
+        }
+
+        // 5. Комбинированная оценка
+        if (($percentages['danger'] < 5) && ($percentages['caution'] < 15)) {
+            return 'Приемлемый состав. Незначительное содержание потенциально проблемных компонентов.';
+        }
+
+        return 'Нейтральный состав. Рекомендуется провести patch-тест перед полным применением.';
+    }
+}

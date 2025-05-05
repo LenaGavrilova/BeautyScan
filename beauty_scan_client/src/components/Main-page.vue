@@ -122,32 +122,32 @@
               <div class="position">#</div>
               <div class="name">Название</div>
               <div class="safety">Безопасность</div>
-              <div class="class">Класс</div>
+              <div class="class">Происхождение</div>
             </div>
             
             <div 
               v-for="(ingredient, index) in analysisResults.ingredients" 
               :key="ingredient.id"
               class="ingredient-row"
-              :class="ingredient.safety_level"
+              :class="ingredient.danger_factor"
             >
               <div class="position">{{ index + 1 }}</div>
               <div class="name">
                 <div class="ingredient-name">
-                  {{ ingredient.name }}
+                  {{ capitalizeFirstLetter(ingredient.traditional_name) }}
                   <span v-if="ingredient.unknown" class="unknown-badge">Неизвестный</span>
                 </div>
-                <div class="ingredient-description">{{ ingredient.description }}</div>
+                <div class="ingredient-description">{{ ingredient.usages }}</div>
               </div>
               <div class="safety">
                 <div 
                   class="safety-indicator" 
-                  :class="ingredient.safety_level"
-                  :title="getSafetyLevelText(ingredient.safety_level)"
+                  :class="ingredient.danger_factor"
+                  :title="getSafetyLevelText(ingredient.danger_factor)"
                 ></div>
-                <span>{{ getSafetyLevelText(ingredient.safety_level) }}</span>
+                <span>{{ getSafetyLevelText(ingredient.danger_factor) }}</span>
               </div>
-              <div class="class">{{ ingredient.class }}</div>
+              <div class="class">{{ ingredient.naturalness }}</div>
             </div>
           </div>
           
@@ -258,7 +258,10 @@ export default {
       this.previewImage = null;
       this.inputText = "";
     },
-
+    capitalizeFirstLetter(str) {
+      if (!str) return ''
+      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+    },
     async processInput() {
       if (!this.inputText.trim() && !this.previewImage) {
         alert("Введите текст или загрузите изображение.");
@@ -335,11 +338,11 @@ export default {
     // Получение текстового описания уровня безопасности
     getSafetyLevelText(level) {
       switch (level) {
-        case 'safe':
+        case 'Низкий':
           return 'Безопасный';
-        case 'caution':
+        case 'Средний':
           return 'С предупреждением';
-        case 'danger':
+        case 'Высокий':
           return 'Опасный';
         case 'unknown':
           return 'Неизвестный';
@@ -368,7 +371,6 @@ export default {
           result: this.analysisResults
         });
 
-        alert("Результаты успешно сохранены в историю!");
       } catch (error) {
         console.error("Ошибка при сохранении в историю:", error);
         alert("Произошла ошибка при сохранении в историю.");
@@ -837,15 +839,15 @@ export default {
   background-color: #f9f9f9;
 }
 
-.ingredient-row.safe {
+.ingredient-row.Низкий {
   border-left: 4px solid #2ecc71;
 }
 
-.ingredient-row.caution {
+.ingredient-row.Средний {
   border-left: 4px solid #f39c12;
 }
 
-.ingredient-row.danger {
+.ingredient-row.Высокий {
   border-left: 4px solid #e74c3c;
 }
 
@@ -887,15 +889,15 @@ export default {
   border-radius: 50%;
 }
 
-.safety-indicator.safe {
+.safety-indicator.Низкий {
   background-color: #2ecc71;
 }
 
-.safety-indicator.caution {
+.safety-indicator.Средний {
   background-color: #f39c12;
 }
 
-.safety-indicator.danger {
+.safety-indicator.Высокий {
   background-color: #e74c3c;
 }
 

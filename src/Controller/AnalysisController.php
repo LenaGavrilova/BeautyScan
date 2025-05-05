@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Analysis;
 use App\Repository\AnalysisRepository;
 use App\Service\IngredientAnalyzerService;
+use App\Service\RequestManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -31,34 +32,16 @@ class AnalysisController extends AbstractController
         $this->ingredientAnalyzer = $ingredientAnalyzer;
     }
 
-    #[Route('/api/extract-text', name: 'extract_text', methods: ['POST'])]
-    public function extractText(Request $request): JsonResponse
-    {
-        $file = $request->files->get('image');
-        
-        if (!$file) {
-            return new JsonResponse(['success' => false, 'message' => 'Изображение не было загружено.'], 400);
-        }
-
-        // Возвращаем текст состава с фотографии
-        $extractedText = "Aqua, Sorbitol, Algae Extract, Hydroxyethyl Urea, Glycerin, Betaine, Sodium PCA, Serine, Glycine, Glutamic Acid, Alanine, Lysine, Arginine, Threonine, Proline, Cocos Nucifera (Coconut) Fruit Extract, Almond Oil Glycereth-8 Esters, Polysorbate 20, Parfum, Methylchloroisothiazolinone, Methylisothiazolinone, Citric Acid, Hexyl Cinnamal, Coumarin";
-
-        return new JsonResponse([
-            'success' => true,
-            'extractedText' => $extractedText
-        ]);
-    }
-
     #[Route('/api/analyze', name: 'analyze_ingredients', methods: ['POST'])]
     public function analyzeIngredients(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         
-        if (!isset($data['ingredients.csv']) || empty($data['ingredients.csv'])) {
+        if (!isset($data['ingredients']) || empty($data['ingredients'])) {
             return new JsonResponse(['success' => false, 'message' => 'Ингредиенты не указаны.'], 400);
         }
 
-        $ingredients = $data['ingredients.csv'];
+        $ingredients = $data['ingredients'];
         
         // Используем сервис для анализа ингредиентов
         $analysisResult = $this->ingredientAnalyzer->analyzeIngredients($ingredients);
@@ -73,17 +56,21 @@ class AnalysisController extends AbstractController
             'recommendation' => $analysisResult['recommendation'],
             'has_unknown_ingredients' => $analysisResult['has_unknown_ingredients'],
             'unknown_count' => $analysisResult['unknown_count'],
-            'ingredients.csv' => []
+            'ingredients' => []
         ];
         
         // Преобразуем ингредиенты в формат, ожидаемый фронтендом
-        foreach ($analysisResult['ingredients.csv'] as $index => $ingredient) {
-            $result['ingredients.csv'][] = [
+        foreach ($analysisResult['ingredients'] as $index => $ingredient) {
+            $result['ingredients'][] = [
                 'id' => $index + 1,
-                'name' => $ingredient['name'],
-                'description' => $ingredient['description'],
-                'safety_level' => $ingredient['safety'],
-                'class' => $ingredient['unknown'] ? 'Неизвестный ингредиент' : $this->getIngredientClass($ingredient['safety']),
+                'traditional_name' => ucfirst($ingredient['traditional_name']),
+                'latin_name' => $ingredient['latin_name'],
+                'inci_name' => $ingredient['inci_name'],
+                'danger_factor' => $ingredient['danger_factor'],
+                'usages' => $ingredient['usages'],
+                'naturalness' => $this->getIngredientClass($ingredient['naturalness']),
+                'safety' => $ingredient['safety'],
+                'class' => $ingredient['unknown'] ? 'Неизвестный ингредиент' : $this->getIngredientClass($ingredient['danger_factor']),
                 'unknown' => $ingredient['unknown']
             ];
         }
@@ -94,15 +81,13 @@ class AnalysisController extends AbstractController
     /**
      * Возвращает класс ингредиента на основе его уровня безопасности
      */
-    private function getIngredientClass(string $safetyLevel): string
+    private function getIngredientClass(string $naturalnass): string
     {
-        switch ($safetyLevel) {
-            case 'safe':
-                return 'Безопасный компонент';
-            case 'caution':
-                return 'Компонент с осторожностью';
-            case 'danger':
-                return 'Потенциально опасный компонент';
+        switch ($naturalnass) {
+            case 'Натуральный':
+                return 'Натуральный компонент';
+            case 'Синтетический':
+                return 'Синтетический компонент';
             default:
                 return 'Неизвестный компонент';
         }

@@ -250,7 +250,6 @@ export default {
         
         this.showEditModal = false;
         this.fetchHistory();
-        alert('Запись успешно обновлена!');
       } catch (error) {
         console.error('Ошибка при обновлении записи:', error);
         alert('Ошибка при обновлении записи. Попробуйте позже.');
@@ -267,7 +266,6 @@ export default {
         await this.$http.delete(`/history/${this.deleteId}`);
         this.showDeleteModal = false;
         this.fetchHistory();
-        alert('Запись успешно удалена!');
       } catch (error) {
         console.error('Ошибка при удалении записи:', error);
         alert('Ошибка при удалении записи. Попробуйте позже.');
