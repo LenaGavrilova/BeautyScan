@@ -49,8 +49,12 @@ class IngredientController extends AbstractController
             $data[] = [
                 'id' => $ingredient->getId(),
                 'traditional_name' => $ingredient->getTraditionalName(),
+                'latin_name' => $ingredient->getLatinName(),
+                'inci_name' => $ingredient->getINCIName(),
                 'danger_factor' => $ingredient->getDangerFactor(),
-                'usages' => $ingredient->getUsages()
+                'naturalness' => $ingredient->getNaturalness(),
+                'usages' => $ingredient->getUsages(),
+                'safety' => $ingredient->getSafety(),
             ];
         }
         
@@ -65,21 +69,16 @@ class IngredientController extends AbstractController
         if (!$ingredient) {
             return new JsonResponse(['success' => false, 'message' => 'Ингредиент не найден.'], 404);
         }
-        
-        $synonyms = [];
-        foreach ($ingredient->getSynonyms() as $synonym) {
-            $synonyms[] = [
-                'id' => $synonym->getId(),
-                'name' => $synonym->getName()
-            ];
-        }
-        
+
         $data = [
             'id' => $ingredient->getId(),
-            'name' => $ingredient->getName(),
-            'safety_level' => $ingredient->getSafetyLevel(),
-            'description' => $ingredient->getDescription(),
-            'synonyms' => $synonyms
+            'traditional_name' => $ingredient->getTraditionalName(),
+            'latin_name' => $ingredient->getLatinName(),
+            'inci_name' => $ingredient->getINCIName(),
+            'danger_factor' => $ingredient->getDangerFactor(),
+            'naturalness' => $ingredient->getNaturalness(),
+            'usages' => $ingredient->getUsages(),
+            'safety' => $ingredient->getSafety(),
         ];
         
         return new JsonResponse($data);

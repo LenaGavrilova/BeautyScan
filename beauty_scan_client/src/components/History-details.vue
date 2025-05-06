@@ -114,7 +114,7 @@
                 ></div>
                 <span>{{ getSafetyLevelText(ingredient.danger_factor) }}</span>
               </div>
-              <div class="class">{{ getNaturalnessLevelText(ingredient.naturalness) }}</div>
+              <div class="class">{{ingredient.naturalness }}</div>
             </div>
           </div>
         </div>
@@ -184,17 +184,6 @@ export default {
       }
     };
 
-    const getNaturalnessLevelText = (level) => {
-      switch (level) {
-        case 'Натуральный':
-          return 'Натуральный компонент';
-        case 'Синтетический':
-          return 'Синтетический компонент';
-        default:
-          return 'Неизвестный компонент';
-      }
-    };
-    
     // Возврат к списку истории
     const goBack = () => {
       router.push('/history');
@@ -210,7 +199,6 @@ export default {
       loading,
       formatDate,
       getSafetyLevelText,
-      getNaturalnessLevelText,
       goBack
     };
   }

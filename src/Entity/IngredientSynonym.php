@@ -14,39 +14,39 @@ class IngredientSynonym
     #[ORM\Column(type: "integer")]
     private $id;
 
-    #[ORM\Column(type: "string", length: 255, unique: true)]
-    private $name;
+    #[ORM\Column(type: "string", length: 255)]
+    private $synonymName;
 
-    #[ORM\ManyToOne(targetEntity: Ingredient::class, inversedBy: "synonyms")]
-    #[ORM\JoinColumn(nullable: false)]
-    private $ingredient;
+    #[ORM\Column(type: "string", length: 255)]
+    private $ingredientName;
 
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getName(): ?string
+    public function getSynonymName(): ?string
     {
-        return $this->name;
+        return $this->synonymName;
     }
 
-    public function setName(string $name): self
+    public function setSynonymName(string $synonymName): self
     {
-        $this->name = $name;
+        $this->synonymName = $synonymName;
 
         return $this;
     }
 
-    public function getIngredient(): ?Ingredient
+    public function getIngredientName(): ?string
     {
-        return $this->ingredient;
+        return $this->ingredientName;
     }
 
-    public function setIngredient(?Ingredient $ingredient): self
+    public function setIngredientName(string $ingredientName): self
     {
-        $this->ingredient = $ingredient;
+        $this->ingredientName = $ingredientName;
 
         return $this;
     }
+
 } 

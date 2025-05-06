@@ -65,7 +65,6 @@ class IngredientAnalyzerService
             }
         }
     }
-
     public function analyzeIngredients(string $ingredientsText): array
     {
         $ingredientsList = array_map('trim', explode(',', $ingredientsText));
@@ -85,7 +84,7 @@ class IngredientAnalyzerService
             $ingredientData = $this->knownIngredients[$ingredient]
                 ?? $this->knownIngredients[mb_strtolower($ingredient, 'UTF-8')]
                 ?? $this->knownIngredients[mb_convert_case($ingredient, MB_CASE_TITLE, 'UTF-8')]
-                ?? null;
+                ?? $this->findSimilarIngredient($ingredient); // Добавляем поиск похожих
 
             if ($ingredientData) {
                 $formattedName = $this->formatOutputName($ingredientData['traditional_name']);
@@ -99,7 +98,8 @@ class IngredientAnalyzerService
                     'naturalness' => $ingredientData['naturalness'],
                     'usages' => $ingredientData['usages'],
                     'safety' => $ingredientData['safety'],
-                    'unknown' => false
+                    'unknown' => false,
+                    'original_input' => $ingredient
                 ];
 
                 // Счетчики безопасности
@@ -120,7 +120,8 @@ class IngredientAnalyzerService
                     'naturalness' => 'unknown',
                     'usages' => 'Неизвестный ингредиент. Информация отсутствует.',
                     'safety' => 'unknown',
-                    'unknown' => true
+                    'unknown' => true,
+                    'original_input' => $ingredient
                 ];
                 $unknownCount++;
             }
@@ -297,5 +298,81 @@ class IngredientAnalyzerService
         }
 
         return 'Нейтральный состав. Рекомендуется провести patch-тест перед полным применением.';
+    }
+
+    private function levenshteinDistance(string $s1, string $s2): int
+    {
+        $s1 = preg_split('//u', $s1, -1, PREG_SPLIT_NO_EMPTY);
+        $s2 = preg_split('//u', $s2, -1, PREG_SPLIT_NO_EMPTY);
+
+        $len1 = count($s1);
+        $len2 = count($s2);
+
+        if ($len1 == 0) return $len2;
+        if ($len2 == 0) return $len1;
+
+        $prevRow = range(0, $len2);
+
+        for ($i = 0; $i < $len1; $i++) {
+            $currentRow = [];
+            $currentRow[0] = $i + 1;
+
+            for ($j = 0; $j < $len2; $j++) {
+                $cost = ($s1[$i] === $s2[$j]) ? 0 : 1;
+                $currentRow[$j + 1] = min(
+                    $prevRow[$j + 1] + 1,
+                    $currentRow[$j] + 1,
+                    $prevRow[$j] + $cost
+                );
+            }
+
+            $prevRow = $currentRow;
+        }
+
+        return $prevRow[$len2];
+    }
+
+    private function findSimilarIngredient(string $searchTerm): ?array
+    {
+        $searchTerm = mb_strtolower(trim($searchTerm), 'UTF-8');
+
+        // 1. Сначала проверяем точные совпадения (быстро)
+        foreach ($this->knownIngredients as $name => $ingredientData) {
+            if (mb_strtolower($name, 'UTF-8') === $searchTerm) {
+                return $ingredientData;
+            }
+        }
+
+        // 2. Проверяем подстроки (довольно быстро)
+        foreach ($this->knownIngredients as $name => $ingredientData) {
+            if (mb_stripos($name, $searchTerm) !== false) {
+                return $ingredientData;
+            }
+        }
+
+        // 3. Только если не нашли - используем Левенштейна для TOP 100 похожих по длине
+        $searchLength = mb_strlen($searchTerm);
+        $candidates = [];
+
+        foreach ($this->knownIngredients as $name => $ingredientData) {
+            $nameLength = mb_strlen($name);
+            if (abs($nameLength - $searchLength) <= 3) { // Сравниваем только с похожими по длине
+                $candidates[$name] = $ingredientData;
+                if (count($candidates) >= 100) break; // Лимит кандидатов
+            }
+        }
+
+        $bestMatch = null;
+        $minDistance = PHP_INT_MAX;
+
+        foreach ($candidates as $name => $ingredientData) {
+            $distance = $this->levenshteinDistance($searchTerm, mb_strtolower($name, 'UTF-8'));
+            if ($distance < $minDistance) {
+                $minDistance = $distance;
+                $bestMatch = $ingredientData;
+            }
+        }
+
+        return $minDistance <= 2 ? $bestMatch : null;
     }
 }
