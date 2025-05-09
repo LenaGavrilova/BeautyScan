@@ -14,8 +14,8 @@ class IngredientSynonym
     #[ORM\Column(type: "integer")]
     private $id;
 
-    #[ORM\Column(type: "string", length: 255)]
-    private $synonymName;
+    #[ORM\Column(type: "array", nullable: true)]
+    private array $synonymName = [];
 
     #[ORM\Column(type: "string", length: 255)]
     private $ingredientName;
@@ -25,17 +25,18 @@ class IngredientSynonym
         return $this->id;
     }
 
-    public function getSynonymName(): ?string
+    public function getSynonymName(): array
     {
         return $this->synonymName;
     }
 
-    public function setSynonymName(string $synonymName): self
+    public function setSynonymName(array $synonymName): self
     {
         $this->synonymName = $synonymName;
 
         return $this;
     }
+
 
     public function getIngredientName(): ?string
     {

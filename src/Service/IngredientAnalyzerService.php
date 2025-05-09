@@ -24,6 +24,7 @@ class IngredientAnalyzerService
         $this->ingredientSynonymRepository = $ingredientSynonymRepository;
 
         $this->loadIngredients();
+        $this->loadSynonyms();
     }
 
     private function loadIngredients(): void
@@ -65,6 +66,22 @@ class IngredientAnalyzerService
             }
         }
     }
+
+    private function loadSynonyms(): void
+    {
+        $synonyms = $this->ingredientSynonymRepository->findAll();
+
+        foreach ($synonyms as $synonym) {
+            $ingredientName = $synonym->getIngredientName();
+            $synonymNames = $synonym->getSynonymName() ?? [];
+
+            foreach ($synonymNames as $synonymName) {
+                if (!empty($synonymName)) {
+                    $this->synonyms[mb_strtolower($synonymName, 'UTF-8')] = $ingredientName;
+                }
+            }
+        }
+    }
     public function analyzeIngredients(string $ingredientsText): array
     {
         $ingredientsList = array_map('trim', explode(',', $ingredientsText));
@@ -96,7 +113,9 @@ class IngredientAnalyzerService
                     'inci_name' => $this->formatOutputName($ingredientData['inci_name']),
                     'danger_factor' => $ingredientData['danger_factor'],
                     'naturalness' => $ingredientData['naturalness'],
-                    'usages' => $ingredientData['usages'],
+                    'usages' => (isset($ingredientData['usages']) && !empty($ingredientData['usages']))
+                        ? $ingredientData['usages']
+                        : $ingredientData['safety'],
                     'safety' => $ingredientData['safety'],
                     'unknown' => false,
                     'original_input' => $ingredient
@@ -350,7 +369,13 @@ class IngredientAnalyzerService
             }
         }
 
-        // 3. Только если не нашли - используем Левенштейна для TOP 100 похожих по длине
+        // 3. Проверяем синонимы
+        if (isset($this->synonyms[$searchTerm])) {
+            $ingredientName = $this->synonyms[$searchTerm];
+            return $this->knownIngredients[$ingredientName] ?? null;
+        }
+
+        // 4. Только если не нашли - используем Левенштейна для TOP 100 похожих по длине
         $searchLength = mb_strlen($searchTerm);
         $candidates = [];
 

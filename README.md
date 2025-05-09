@@ -1,8 +1,3 @@
-TODO:
-Алгоритм Левенштейна
-Подвязать синонимы из таблицы synonyms
-Доработать админку
-
 BeautyScan
 
 BeautyScan - это веб-приложение для анализа состава косметических средств. Приложение позволяет пользователям проверять безопасность ингредиентов в косметических продуктах, получать рекомендации и сохранять результаты анализа в личном кабинете.
@@ -64,9 +59,10 @@ php bin/console doctrine:migrations:migrate
 
 5. Загрузить начальный набор ингредиентов из CSV-файла (опционально):
 ```bash
-php bin/console app:import-ingredients.csv data/ingredients.csv
-php bin/console app:import-synonyms.csv data/synonyms.csv
-php bin/console app:import-categories.csv data/categories.csv
+php bin/console app:import-ingredients data/ingredients.csv
+php bin/console app:import-synonyms data/synonyms.csv
+php bin/console app:import-categories data/categories.csv
+php bin/console app:import-ingredientSynonyms data/ingredientSynonym.csv
 ```
 
 6. Запустить сервер:
