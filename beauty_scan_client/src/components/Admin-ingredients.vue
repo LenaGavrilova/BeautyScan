@@ -47,51 +47,63 @@
           :key="ingredient.id"
           class="ingredient-item"
           :class="{'Низкий': ingredient.danger_factor === 'Низкий',
-                 'Средний': ingredient.danger_factor === 'Средний',
-                 'Высокий': ingredient.danger_factor === 'Высокий'}"
+               'Средний': ingredient.danger_factor === 'Средний',
+               'Высокий': ingredient.danger_factor === 'Высокий'}"
       >
         <div class="ingredient-header">
-          <h3>{{ ingredient.traditional_name }}</h3>
+          <h3 class="ingredient-title">{{ ingredient.traditional_name }}</h3>
           <div class="actions">
             <button class="edit-btn" @click="editIngredient(ingredient)">
-              Редактировать
+              Ред.
             </button>
             <button class="delete-btn" @click="confirmDelete(ingredient.id)">
-              Удалить
+              Удл.
             </button>
           </div>
         </div>
 
         <div class="ingredient-content">
-          <div class="name-variants">
-            <div><strong>Латинское название:</strong> {{ ingredient.latin_name }}</div>
-            <div><strong>INCI название:</strong> {{ ingredient.inci_name }}</div>
+          <div class="property">
+            <strong>Латинское:</strong> <span class="value">{{ ingredient.latin_name || '—' }}</span>
           </div>
 
-          <div class="characteristics">
-            <div class="safety">
-              <strong>Уровень безопасности:</strong>
-              <span :class="ingredient.danger_factor">
-                {{ getSafetyLevelText(ingredient.danger_factor) }}
-              </span>
-            </div>
-
-            <div class="naturalness">
-              <strong>Натуральность:</strong>
-              <span>{{ getNaturalnessText(ingredient.naturalness) }}</span>
-            </div>
+          <div class="property">
+            <strong>INCI:</strong> <span class="value">{{ ingredient.inci_name || '—' }}</span>
           </div>
 
-          <div class="description">
-            <strong>Описание:</strong> {{ ingredient.usages }}
+          <div class="property">
+            <strong>Безопасность:</strong> <span class="value" :class="ingredient.danger_factor">
+        {{ getSafetyLevelText(ingredient.danger_factor) }}
+      </span>
           </div>
 
-          <div class="safety-info" v-if="ingredient.safety">
-            <strong>Информация о безопасности:</strong> {{ ingredient.safety }}
+          <div class="property">
+            <strong>Тип:</strong> <span class="value">{{ getNaturalnessText(ingredient.naturalness) }}</span>
           </div>
 
-          <div class="synonyms" v-if="ingredient.synonyms && ingredient.synonyms.length">
-            <strong>Синонимы:</strong> {{ ingredient.synonyms.map(s => s.name).join(', ') }}
+          <div class="property">
+            <strong>Описание:</strong>
+            <div class="value compact-text">{{ ingredient.usages || '—' }}</div>
+          </div>
+
+          <div class="property" v-if="ingredient.safety">
+            <strong>Острожности при применении:</strong>
+            <div class="value compact-text">{{ ingredient.safety }}</div>
+          </div>
+
+          <div class="property" v-if="ingredient.safety">
+            <strong>Категория:</strong>
+            <div class="value compact-text">{{ ingredient.category }}</div>
+          </div>
+
+          <div class="property" v-if="ingredient.safety">
+            <strong>Зона эффективности:</strong>
+            <div class="value compact-text">{{ ingredient.effectiveness }}</div>
+          </div>
+
+          <div class="property" v-if="ingredient.synonyms?.length">
+            <strong>Синонимы:</strong>
+            <div class="value compact-text">{{ ingredient.synonyms.map(s => s.name).join(', ') }}</div>
           </div>
         </div>
       </div>
@@ -155,6 +167,14 @@
             <textarea id="safety" v-model="ingredientForm.safety" rows="4"></textarea>
           </div>
 
+          <div class="form-group">
+            <label for="usages">Категория:</label>
+            <textarea id="usages" v-model="ingredientForm.category" rows="4" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="usages">Зона эффективности:</label>
+            <textarea id="usages" v-model="ingredientForm.effectiveness" rows="4" required></textarea>
+          </div>
           <div class="form-group">
             <label>Синонимы:</label>
             <div class="synonyms-container">
@@ -228,6 +248,14 @@
           </div>
 
           <div class="form-group">
+            <label for="edit-usages">Категория:</label>
+            <textarea id="edit-usages" v-model="ingredientForm.category" rows="4" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="edit-usages">Зона эффективности:</label>
+            <textarea id="edit-usages" v-model="ingredientForm.effectiveness" rows="4" required></textarea>
+          </div>
+          <div class="form-group">
             <label>Синонимы:</label>
             <div class="synonyms-container">
               <div v-for="(synonym, index) in ingredientForm.synonyms" :key="index" class="synonym-item">
@@ -284,7 +312,9 @@ export default {
         naturalness: 'Натуральный',
         usages: '',
         safety: '',
-        synonyms: []
+        synonyms: [],
+        category: '',
+        effectiveness: ''
       }
     };
   },
@@ -313,7 +343,9 @@ export default {
           danger_factor: ingredient.danger_factor || '',
           naturalness: ingredient.naturalness || '',
           usages: ingredient.usages || '',
-          synonyms: ingredient.synonyms || []
+          synonyms: ingredient.synonyms || [],
+          category: ingredient.category || '',
+          effectiveness: ingredient.effectiveness || ''
         }));
         this.filterIngredients();
       } catch (error) {
@@ -366,7 +398,9 @@ export default {
         naturalness: ingredient.naturalness || 'Натуральный',
         usages: ingredient.usages,
         safety: ingredient.safety || '',
-        synonyms: ingredient.synonyms ? ingredient.synonyms.map(s => s.name) : []
+        synonyms: ingredient.synonyms ? ingredient.synonyms.map(s => s.name) : [],
+        category: ingredient.category || '',
+        effectiveness: ingredient.effectiveness || ''
       };
       this.showEditForm = true;
     },
@@ -392,7 +426,9 @@ export default {
         naturalness: 'Натуральный',
         usages: '',
         safety: '',
-        synonyms: []
+        synonyms: [],
+        category: '',
+        effectiveeness : ''  ,
       };
     },
 
@@ -414,7 +450,9 @@ export default {
           naturalness: this.ingredientForm.naturalness,
           usages: this.ingredientForm.usages,
           safety: this.ingredientForm.safety,
-          synonyms: this.ingredientForm.synonyms.filter(s => s.trim() !== '')
+          synonyms: this.ingredientForm.synonyms.filter(s => s.trim() !== ''),
+          category: this.ingredientForm.category,
+          effectiveness: this.ingredientForm.effectiveness
         });
 
         await this.loadIngredients();
@@ -436,7 +474,9 @@ export default {
           naturalness: this.ingredientForm.naturalness,
           usages: this.ingredientForm.usages,
           safety: this.ingredientForm.safety,
-          synonyms: this.ingredientForm.synonyms.filter(s => s.trim() !== '')
+          synonyms: this.ingredientForm.synonyms.filter(s => s.trim() !== ''),
+          category: this.ingredientForm.category,
+          effectiveness: this.ingredientForm.effectiveness
         });
 
         await this.loadIngredients();
@@ -742,5 +782,92 @@ h1 {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+.ingredient-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9em;
+}
+
+.property {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px;
+  line-height: 1.3;
+}
+
+.property > strong {
+  flex-shrink: 0;
+}
+
+.value {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.compact-text {
+  max-height: 80px;
+  overflow-y: auto;
+  padding: 2px 4px;
+  background: #f8f8f8;
+  border-radius: 2px;
+  font-size: 0.9em;
+  width: 100%;
+}
+
+/* Уменьшаем отступы в заголовке */
+.ingredient-header {
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.edit-btn, .delete-btn {
+  padding: 3px 8px;
+  min-width: 40px; /* Фиксированная ширина кнопок */
+  font-size: 0.8em;
+  height: 24px; /* Фиксированная высота кнопок */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Уменьшаем общие отступы */
+.ingredient-item {
+  padding: 10px;
+}
+
+/* Уменьшаем отступы между карточками */
+.ingredients-list {
+  gap: 12px;
+}
+
+.ingredient-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #eee;
+  min-height: 32px; /* Фиксированная высота */
+}
+
+.ingredient-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
+  margin: 0;
+  padding-right: 10px;
+  font-size: 1em;
+  line-height: 1.2;
+}
+
+.header-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
 }
 </style>

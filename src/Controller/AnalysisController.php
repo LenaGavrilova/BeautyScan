@@ -71,7 +71,9 @@ class AnalysisController extends AbstractController
                 'naturalness' => $this->getIngredientClass($ingredient['naturalness']),
                 'safety' => $ingredient['safety'],
                 'class' => $ingredient['unknown'] ? 'Неизвестный ингредиент' : $this->getIngredientClass($ingredient['danger_factor']),
-                'unknown' => $ingredient['unknown']
+                'unknown' => $ingredient['unknown'],
+                'category' => $ingredient['category'],
+                'effectiveness' => $ingredient['effectiveness']
             ];
         }
 

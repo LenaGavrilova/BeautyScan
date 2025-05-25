@@ -4,6 +4,8 @@ namespace App\Controller;
 
 use App\Entity\Ingredient;
 use App\Entity\IngredientSynonym;
+use App\Repository\IngredientCategoryRepository;
+use App\Repository\IngredientEffectivenessRepository;
 use App\Repository\IngredientRepository;
 use App\Repository\IngredientSynonymRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,32 +22,45 @@ class IngredientController extends AbstractController
     private $security;
     private $ingredientRepository;
     private $ingredientSynonymRepository;
+    private $ingredientCategoryRepository;
+    private $ingredientEffectivenessRepository;
 
     public function __construct(
         EntityManagerInterface $entityManager,
         Security $security,
         IngredientRepository $ingredientRepository,
-        IngredientSynonymRepository $ingredientSynonymRepository
+        IngredientSynonymRepository $ingredientSynonymRepository,
+        IngredientCategoryRepository $ingredientCategoryRepository,
+        IngredientEffectivenessRepository $ingredientEffectivenessRepository
     ) {
         $this->entityManager = $entityManager;
         $this->security = $security;
         $this->ingredientRepository = $ingredientRepository;
         $this->ingredientSynonymRepository = $ingredientSynonymRepository;
+        $this->ingredientCategoryRepository = $ingredientCategoryRepository;
+        $this->ingredientEffectivenessRepository = $ingredientEffectivenessRepository;
     }
 
     #[Route('/ingredients', name: 'get_ingredients', methods: ['GET'])]
     public function getIngredients(Request $request): JsonResponse
     {
-        $safetyLevel = $request->query->get('safety_level');
+        $safetyLevel = $request->query->get('danger_factor');
         
         if ($safetyLevel) {
             $ingredients = $this->ingredientRepository->findBySafetyLevel($safetyLevel);
         } else {
-            $ingredients = $this->ingredientRepository->findAll();
+            $ingredients = array_reverse($this->ingredientRepository->findAll());
         }
         
         $data = [];
         foreach ($ingredients as $ingredient) {
+            $formattedName = mb_convert_case($ingredient->getTraditionalName(), MB_CASE_TITLE, 'UTF-8');
+
+            $category = $this->ingredientCategoryRepository->findOneBy(['ingredientName'=> $formattedName]);
+            $categoryName = !is_null($category) ? $category->getCategoryName() : '';
+
+            $effectiveness = $this->ingredientEffectivenessRepository->findOneBy(['ingredientName'=> $formattedName]);
+            $effectivenessName = !is_null($effectiveness) ? $effectiveness->getEffectivenessName() : '';
             $data[] = [
                 'id' => $ingredient->getId(),
                 'traditional_name' => $ingredient->getTraditionalName(),
@@ -53,8 +68,10 @@ class IngredientController extends AbstractController
                 'inci_name' => $ingredient->getINCIName(),
                 'danger_factor' => $ingredient->getDangerFactor(),
                 'naturalness' => $ingredient->getNaturalness(),
-                'usages' => $ingredient->getUsages(),
+                'usages' => $ingredient->getUsages() ?? $ingredient->getSafety(),
                 'safety' => $ingredient->getSafety(),
+                'category' => $categoryName,
+                'effectiveness' => $effectivenessName
             ];
         }
         
@@ -69,6 +86,13 @@ class IngredientController extends AbstractController
         if (!$ingredient) {
             return new JsonResponse(['success' => false, 'message' => 'Ингредиент не найден.'], 404);
         }
+        $formattedName = mb_convert_case($ingredient->getTraditionalName(), MB_CASE_TITLE, 'UTF-8');
+
+        $category = $this->ingredientCategoryRepository->findOneBy(['ingredientName'=> $formattedName]);
+        $categoryName = !is_null($category) ? $category->getCategoryName() : '';
+
+        $effectiveness = $this->ingredientEffectivenessRepository->findOneBy(['ingredientName'=> $formattedName]);
+        $effectivenessName = !is_null($effectiveness) ? $effectiveness->getEffectivenessName() : '';
 
         $data = [
             'id' => $ingredient->getId(),
@@ -79,6 +103,8 @@ class IngredientController extends AbstractController
             'naturalness' => $ingredient->getNaturalness(),
             'usages' => $ingredient->getUsages(),
             'safety' => $ingredient->getSafety(),
+            'category' => $categoryName,
+            'effectiveness' => $effectivenessName
         ];
         
         return new JsonResponse($data);

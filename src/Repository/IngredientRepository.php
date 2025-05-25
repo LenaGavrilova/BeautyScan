@@ -31,9 +31,9 @@ class IngredientRepository extends ServiceEntityRepository
     public function findBySafetyLevel(string $safetyLevel): array
     {
         return $this->createQueryBuilder('i')
-            ->where('i.safetyLevel = :safetyLevel')
+            ->where('i.dangerFactor = :safetyLevel')
             ->setParameter('safetyLevel', $safetyLevel)
-            ->orderBy('i.name', 'ASC')
+            ->orderBy('i.traditionalName', 'DESC')
             ->getQuery()
             ->getResult();
     }

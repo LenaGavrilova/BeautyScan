@@ -93,6 +93,8 @@
               <div class="name">Название</div>
               <div class="safety">Безопасность</div>
               <div class="class">Происхождение</div>
+              <div class="class">Категория</div>
+              <div class="class">Зона эффективности</div>
             </div>
             
             <div 
@@ -115,6 +117,8 @@
                 <span>{{ getSafetyLevelText(ingredient.danger_factor) }}</span>
               </div>
               <div class="class">{{ingredient.naturalness }}</div>
+              <div class="class">{{ingredient.category }}</div>
+              <div class="class">{{ingredient.effectiveness }}</div>
             </div>
           </div>
         </div>

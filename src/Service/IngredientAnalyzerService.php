@@ -2,6 +2,8 @@
 
 namespace App\Service;
 
+use App\Repository\IngredientCategoryRepository;
+use App\Repository\IngredientEffectivenessRepository;
 use App\Repository\IngredientRepository;
 use App\Repository\IngredientSynonymRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -11,17 +13,25 @@ class IngredientAnalyzerService
     private $entityManager;
     private $ingredientRepository;
     private $ingredientSynonymRepository;
+
+    private $ingredientCategoryRepository;
+    private $ingredientEffectivenessRepository;
+
     private array $knownIngredients = [];
     private array $synonyms = [];
 
     public function __construct(
         EntityManagerInterface $entityManager,
         IngredientRepository $ingredientRepository,
-        IngredientSynonymRepository $ingredientSynonymRepository
+        IngredientSynonymRepository $ingredientSynonymRepository,
+        IngredientCategoryRepository $ingredientCategoryRepository,
+        IngredientEffectivenessRepository $ingredientEffectivenessRepository
     ) {
         $this->entityManager = $entityManager;
         $this->ingredientRepository = $ingredientRepository;
         $this->ingredientSynonymRepository = $ingredientSynonymRepository;
+        $this->ingredientCategoryRepository = $ingredientCategoryRepository;
+        $this->ingredientEffectivenessRepository = $ingredientEffectivenessRepository;
 
         $this->loadIngredients();
         $this->loadSynonyms();
@@ -106,6 +116,11 @@ class IngredientAnalyzerService
             if ($ingredientData) {
                 $formattedName = $this->formatOutputName($ingredientData['traditional_name']);
 
+                $category = $this->ingredientCategoryRepository->findOneBy(['ingredientName'=> $formattedName]);
+                $categoryName = !is_null($category) ? $category->getCategoryName() : '';
+
+                $effectiveness = $this->ingredientEffectivenessRepository->findOneBy(['ingredientName'=> $formattedName]);
+                $effectivenessName = !is_null($effectiveness) ? $effectiveness->getEffectivenessName() : '';
                 $analyzedIngredients[] = [
                     'position' => $position + 1,
                     'traditional_name' => $formattedName,
@@ -118,7 +133,9 @@ class IngredientAnalyzerService
                         : $ingredientData['safety'],
                     'safety' => $ingredientData['safety'],
                     'unknown' => false,
-                    'original_input' => $ingredient
+                    'original_input' => $ingredient,
+                    'category' => $categoryName,
+                    'effectiveness' => $effectivenessName
                 ];
 
                 // Счетчики безопасности
@@ -140,7 +157,9 @@ class IngredientAnalyzerService
                     'usages' => 'Неизвестный ингредиент. Информация отсутствует.',
                     'safety' => 'unknown',
                     'unknown' => true,
-                    'original_input' => $ingredient
+                    'original_input' => $ingredient,
+                    'category' => '',
+                    'effectiveness' => ''
                 ];
                 $unknownCount++;
             }

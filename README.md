@@ -63,6 +63,8 @@ php bin/console app:import-ingredients data/ingredients.csv
 php bin/console app:import-synonyms data/synonyms.csv
 php bin/console app:import-categories data/categories.csv
 php bin/console app:import-ingredientSynonyms data/ingredientSynonym.csv
+php bin/console app:import-ingredientCategory data/ingredientCategory.csv
+php bin/console app:import-ingredientEffectiveness data/ingredientEffectiveness.csv
 ```
 
 6. Запустить сервер:

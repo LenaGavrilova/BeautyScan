@@ -27,7 +27,7 @@ class AccountManager
     {
         return [
             'email' => $user->getEmail(),
-            'username' => $user->getUsername(),
+            'name' => $user->getUsername(),
             'roles' => $user->getRoles(),
         ];
     }
