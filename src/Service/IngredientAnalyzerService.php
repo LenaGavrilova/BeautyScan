@@ -173,7 +173,10 @@ class IngredientAnalyzerService
         return [
             'ingredients' => $analyzedIngredients,
             'safety_rating' => $safetyRating,
-            'safety_percentages' => $safetyPercentages,
+            'safe_percentage' => $safetyPercentages['safe'],
+            'caution_percentage' => $safetyPercentages['caution'],
+            'danger_percentage' => $safetyPercentages['danger'],
+            'unknown_percentage' => $safetyPercentages['unknown'],
             'recommendation' => $this->generateRecommendation($safetyPercentages, $unknownCount, $totalIngredients),
             'has_unknown_ingredients' => $unknownCount > 0,
             'unknown_count' => $unknownCount

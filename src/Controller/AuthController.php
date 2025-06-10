@@ -2,82 +2,58 @@
 
 namespace App\Controller;
 
-use App\Repository\UserRepository;
-use App\Service\LoginManager;
-use App\Service\RegistrationManager;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTEncodeFailureException;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use App\Service\AuthManager;
+use App\Service\TokenManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Annotation\Route;
 
 class AuthController extends AbstractController
-
 {
-    private $registrationManager;
-    private $loginManager;
+    private $authManager;
+    private $tokenManager;
 
-    private $jwtManager;
-
-    private $userRepository;
-
-    private $secretKey;
-
-    public function __construct(RegistrationManager $registrationManager, LoginManager $loginManager,
-                                JWTTokenManagerInterface $jwtManager, UserRepository $userRepository,string $secretKey)
+    public function __construct(AuthManager $authManager, TokenManager $tokenManager)
     {
-        $this->registrationManager = $registrationManager;
-        $this->loginManager        = $loginManager;
-        $this->jwtManager          = $jwtManager;
-        $this->userRepository      = $userRepository;
-        $this->secretKey           = $secretKey;
+        $this->authManager = $authManager;
+        $this->tokenManager = $tokenManager;
     }
 
-
-    /**
-     * @throws \Exception
-     */
     #[Route('/api/register', name: 'api_register', methods: ['POST'])]
     public function register(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
-
-        $user = $this->registrationManager->registerUser($data);
-
-        return $user;
+        try {
+            $result = $this->authManager->registerUser($data);
+            return new JsonResponse($result, JsonResponse::HTTP_CREATED);
+        } catch (\InvalidArgumentException $e) {
+            return new JsonResponse(['message' => $e->getMessage()], $e->getCode());
+        } catch (\RuntimeException $e) {
+            return new JsonResponse(['message' => $e->getMessage()], $e->getCode());
+        }
     }
 
     #[Route('/api/login', name: 'api_login', methods: ['POST'])]
     public function login(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-
         $email = $data['email'] ?? '';
         $password = $data['password'] ?? '';
 
-        // Проверка на пустые поля
         if (empty($email) || empty($password)) {
             return new JsonResponse(['message' => 'Пожалуйста, заполните все поля'], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        // Вызов сервиса для аутентификации
-        $user = $this->loginManager->authenticateUser($email, $password);
+        $user = $this->authManager->authenticateUser($email, $password);
 
         if (!$user) {
             return new JsonResponse(['message' => 'Неверный email или пароль'], JsonResponse::HTTP_UNAUTHORIZED);
         }
 
-        $accessToken = $this->jwtManager->create($user);
-        $refreshToken = JWT::encode([
-            'user_id' => $user->getId(),
-            'exp' => time() + 604800,
-        ], $this->secretKey, 'HS256');
+        $accessToken = $this->tokenManager->createAccessToken($user);
+        $refreshToken = $this->tokenManager->createRefreshToken($user);
 
         return new JsonResponse([
             'message' => 'Вход выполнен успешно',
@@ -96,33 +72,15 @@ class AuthController extends AbstractController
     public function refreshToken(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-
         $refreshToken = $data['refresh_token'] ?? '';
 
         if (empty($refreshToken)) {
             return new JsonResponse(['message' => 'Refresh Token отсутствует'], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        // Проверка валидности Refresh Token
         try {
-            // Декодируем Refresh Token
-            $decoded = JWT::decode($refreshToken, new Key($this->secretKey, 'HS256'));
-            $userId = $decoded->user_id;
-
-            // Здесь вы должны найти пользователя в базе данных
-            // Например, используя UserRepository
-            $user = $this->userRepository->find($userId);
-
-            if (!$user) {
-                return new JsonResponse(['message' => 'Пользователь не найден'], JsonResponse::HTTP_UNAUTHORIZED);
-            }
-
-            // Создаем новый Access Token
-            $newAccessToken = $this->jwtManager->create($user);
-
-            return new JsonResponse([
-                'access_token' => $newAccessToken,
-            ]);
+            $newAccessToken = $this->tokenManager->refreshAccessToken($refreshToken);
+            return new JsonResponse(['access_token' => $newAccessToken]);
         } catch (\Exception $e) {
             return new JsonResponse(['message' => 'Недействительный Refresh Token'], JsonResponse::HTTP_UNAUTHORIZED);
         }

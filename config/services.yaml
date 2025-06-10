@@ -21,13 +21,10 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    App\Service\LoginManager:
-        arguments:
-            $passwordHasher: '@security.password_hasher'
     App\Service\RequestManager:
         arguments:
             $uploadDir: '%upload_dir%'
-    App\Controller\AuthController:
+    App\Service\TokenManager:
         arguments:
             $secretKey: '%env(resolve:JWT_PASSPHRASE)%'
 

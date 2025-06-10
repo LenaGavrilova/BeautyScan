@@ -4,6 +4,9 @@ namespace App\Service;
 
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
@@ -14,26 +17,33 @@ class AccountManager
     private EntityManagerInterface $entityManager;
     private ValidatorInterface $validator;
     private UserPasswordHasherInterface $passwordHasher;
+    private JWTTokenManagerInterface $jwtManager;
 
-    public function __construct(EntityManagerInterface $entityManager, ValidatorInterface $validator, UserPasswordHasherInterface $passwordHasher)
-    {
+    public function __construct(
+        EntityManagerInterface $entityManager,
+        ValidatorInterface $validator,
+        UserPasswordHasherInterface $passwordHasher,
+        JWTTokenManagerInterface $jwtManager
+    ) {
         $this->entityManager = $entityManager;
         $this->validator = $validator;
         $this->passwordHasher = $passwordHasher;
-
+        $this->jwtManager = $jwtManager;
     }
 
-    public function getUserData(User $user): array
+    public function handleGetAccount(User $user): JsonResponse
     {
-        return [
+        return new JsonResponse([
             'email' => $user->getEmail(),
             'name' => $user->getUsername(),
             'roles' => $user->getRoles(),
-        ];
+        ]);
     }
 
-    public function updateUserData(User $user, array $data): array
+    public function handleUpdateAccount(User $user, Request $request): JsonResponse
     {
+        $data = json_decode($request->getContent(), true);
+
         if (isset($data['email'])) {
             $user->setEmail($data['email']);
         }
@@ -49,11 +59,10 @@ class AccountManager
             ]);
 
             if (count($violations) > 0) {
-                return ['error' => 'Пароль должен содержать минимум 8 символов'];
+                return new JsonResponse(['error' => 'Пароль должен содержать минимум 8 символов'], 400);
             }
 
             $hashedPassword = $this->passwordHasher->hashPassword($user, $data['newPassword']);
-
             $user->setPassword($hashedPassword);
         }
 
@@ -63,24 +72,26 @@ class AccountManager
             foreach ($errors as $error) {
                 $errorMessages[] = $error->getMessage();
             }
-            return ['errors' => $errorMessages];
+            return new JsonResponse(['errors' => $errorMessages], 400);
         }
 
         $this->entityManager->flush();
 
-        return ['success' => 'Изменения применены успешно'];
+        $newToken = $this->jwtManager->create($user);
+        return new JsonResponse([
+            'success' => 'Изменения применены успешно',
+            'token' => $newToken,
+        ]);
     }
 
-
-    public function deleteAccount(User $user): array
+    public function handleDeleteAccount(User $user): JsonResponse
     {
         try {
             $this->entityManager->remove($user);
             $this->entityManager->flush();
-            return ['success' => 'Аккаунт успешно удален'];
+            return new JsonResponse(['success' => 'Аккаунт успешно удален']);
         } catch (\Exception $e) {
-            return ['error' => 'Произошла ошибка во время удаления аккаунта'];
+            return new JsonResponse(['error' => 'Произошла ошибка во время удаления аккаунта'], 400);
         }
     }
-
 }
